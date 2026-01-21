@@ -1,0 +1,6 @@
+name,category,base_likelihood,impact,confidence,time_horizon,description
+Career stagnation,career,0.4,3,0.7,months,Lack of continuous skill development and learning
+Budget overrun,financial,0.25,4,0.85,weeks,Project expenses exceeding allocated budget
+Chronic stress,health,0.6,3,0.9,months,Sustained high workload without adequate recovery
+Technical debt accumulation,technical,0.5,4,0.75,months,Growing complexity and maintenance burden in codebase
+Relationship strain,personal,0.3,3,0.6,months,Reduced quality time and communication with family

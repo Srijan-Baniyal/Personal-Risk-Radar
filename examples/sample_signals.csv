@@ -1,0 +1,10 @@
+name,risk_id,direction,strength,description
+Failed tests in CI/CD,1,increase,strong,Multiple test failures in recent pipeline runs
+No code reviews for 2 weeks,1,increase,medium,Pull requests merged without peer review
+Delayed project milestones,2,increase,strong,Missing 3 consecutive sprint goals
+Increasing overtime hours,3,increase,strong,Working >10 hours/day for 6+ days
+Declining sleep quality,3,increase,medium,Less than 6 hours of sleep per night
+Outdated dependencies,4,increase,medium,Core libraries not updated in 6+ months
+Missing documentation,4,increase,weak,New features lack proper documentation
+Regular exercise routine,3,decrease,medium,Consistent workout schedule maintained
+Weekly planning sessions,2,decrease,weak,Regular budget review meetings scheduled
