@@ -18,10 +18,10 @@ def calculate_effective_likelihood(
     Returns:
         Effective likelihood (clamped to 0-1)
     """
-    effective = base_likelihood
+    effective: float = base_likelihood
 
     for signal in signals:
-        modifier = signal.get_likelihood_modifier()
+        modifier: float = signal.get_likelihood_modifier()
         effective += modifier
 
     # Clamp to valid probability range
@@ -62,10 +62,13 @@ def assess_risk(risk: Risk, signals: Optional[list[Signal]] = None) -> Assessmen
         signals = []
 
     # Calculate effective likelihood with signal adjustments
-    effective_likelihood = calculate_effective_likelihood(risk.base_likelihood, signals)
+    effective_likelihood: float = calculate_effective_likelihood(base_likelihood=risk.base_likelihood, signals=signals)
 
     # Calculate final risk score
-    risk_score = calculate_risk_score(effective_likelihood, risk.impact, risk.confidence)
+    risk_score: float = calculate_risk_score(likelihood=effective_likelihood, impact=risk.impact, confidence=risk.confidence)
+
+    if risk.id is None:
+        raise ValueError("Risk must have an ID to create an assessment")
 
     return Assessment(
         risk_id=risk.id,
@@ -87,4 +90,4 @@ def assess_all_risks(risks_with_signals: list[tuple[Risk, list[Signal]]]) -> lis
     Returns:
         List of assessments
     """
-    return [assess_risk(risk, signals) for risk, signals in risks_with_signals]
+    return [assess_risk(risk=risk, signals=signals) for risk, signals in risks_with_signals]

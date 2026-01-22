@@ -1,6 +1,6 @@
 """Domain models for Personal Risk Radar."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -110,12 +110,12 @@ class Assessment(BaseModel):
 
     id: Optional[int] = None
     risk_id: int
-    effective_likelihood: float = Field(..., ge=0.0, le=1.0)
-    impact: int = Field(..., ge=1, le=5)
-    confidence: float = Field(..., ge=0.0, le=1.0)
-    risk_score: float = Field(..., ge=0.0)
+    effective_likelihood: float = Field(default=..., ge=0.0, le=1.0)
+    impact: int = Field(default=..., ge=1, le=5)
+    confidence: float = Field(default=..., ge=0.0, le=1.0)
+    risk_score: float = Field(default=..., ge=0.0)
     signal_count: int = Field(default=0, ge=0)
-    assessed_at: datetime = Field(default_factory=datetime.utcnow)
+    assessed_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
 
     @field_validator("effective_likelihood", "confidence")
     @classmethod
@@ -129,7 +129,7 @@ class Assessment(BaseModel):
 class RiskWithSignals(Risk):
     """Risk model with associated signals."""
 
-    signals: list[Signal] = Field(default_factory=list)
+    signals: list[Signal] = Field(default_factory=list) #type: ignore[list-item]
 
 
 class AssessmentWithRisk(Assessment):

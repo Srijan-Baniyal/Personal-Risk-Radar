@@ -18,7 +18,7 @@ from persistence.database import (
     update_signal,
 )
 
-__all__ = [
+__all__: list[str] = [
     "init_db",
     "get_db",
     # Risk CRUD

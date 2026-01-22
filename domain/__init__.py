@@ -7,7 +7,7 @@ from domain.scoring import (assess_all_risks, assess_risk,
                             calculate_effective_likelihood,
                             calculate_risk_score)
 
-__all__ = [
+__all__: list[str] = [
     # Models
     "Risk",
     "Signal",

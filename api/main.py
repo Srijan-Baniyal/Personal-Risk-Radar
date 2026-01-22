@@ -1,5 +1,7 @@
 """FastAPI application with all routes."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,8 +10,17 @@ from api.risks import router as risks_router
 from api.signals import router as signals_router
 from persistence.database import init_db
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize database on startup."""
+    init_db()
+    yield
+
+
 # Initialize FastAPI app
 app = FastAPI(
+    lifespan=lifespan,
     title="Personal Risk Radar API",
     description="API for modeling, tracking, and reasoning about risk over time",
     version="1.0.0",
@@ -17,7 +28,7 @@ app = FastAPI(
 
 # CORS middleware
 app.add_middleware(
-    CORSMiddleware,
+    middleware_class=CORSMiddleware,
     allow_origins=["*"],  # In production, specify actual origins
     allow_credentials=True,
     allow_methods=["*"],
@@ -25,19 +36,13 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(risks_router)
-app.include_router(signals_router)
-app.include_router(data_input_router)
+app.include_router(router=risks_router)
+app.include_router(router=signals_router)
+app.include_router(router=data_input_router)
 
 
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Initialize database on startup."""
-    init_db()
-
-
-@app.get("/")
-async def root() -> dict:
+@app.get(path="/")
+async def root() -> dict[str, str]:
     """Root endpoint."""
     return {
         "message": "Personal Risk Radar API",
@@ -46,8 +51,8 @@ async def root() -> dict:
     }
 
 
-@app.get("/health")
-async def health_check() -> dict:
+@app.get(path="/health")
+async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "healthy"}
 
@@ -55,4 +60,4 @@ async def health_check() -> dict:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app=app, host="0.0.0.0", port=8000)

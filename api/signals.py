@@ -1,12 +1,12 @@
 """FastAPI routes for Signal CRUD operations."""
 
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from domain.models import SignalDirection, SignalStrength
-from persistence.database import (create_signal, delete_signal, get_db,
+from persistence.database import (RiskModel, SignalModel, create_signal, delete_signal, get_db,
                                   get_risk, get_signal, get_signals_for_risk,
                                   update_signal)
 
@@ -52,19 +52,19 @@ class SignalResponse(BaseModel):
 
 
 # Endpoints
-@router.post("/", response_model=SignalResponse, status_code=status.HTTP_201_CREATED)
+@router.post(path="/", response_model=SignalResponse, status_code=status.HTTP_201_CREATED)
 def create_signal_endpoint(signal: SignalCreate) -> SignalResponse:
     """Create a new signal."""
     with get_db() as db:
         # Verify risk exists
-        risk = get_risk(db, signal.risk_id)
+        risk: RiskModel | None = get_risk(db=db, risk_id=signal.risk_id)
         if not risk:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
             )
 
         # Create signal
-        db_signal = create_signal(db, signal.model_dump())
+        db_signal: SignalModel = create_signal(db=db, signal_data=signal.model_dump())
 
         return SignalResponse(
             id=db_signal.id,
@@ -78,11 +78,11 @@ def create_signal_endpoint(signal: SignalCreate) -> SignalResponse:
         )
 
 
-@router.get("/{signal_id}", response_model=SignalResponse)
+@router.get(path="/{signal_id}", response_model=SignalResponse)
 def get_signal_endpoint(signal_id: int) -> SignalResponse:
     """Get a signal by ID."""
     with get_db() as db:
-        db_signal = get_signal(db, signal_id)
+        db_signal: SignalModel | None = get_signal(db=db, signal_id=signal_id)
         if not db_signal:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Signal not found"
@@ -100,18 +100,18 @@ def get_signal_endpoint(signal_id: int) -> SignalResponse:
         )
 
 
-@router.get("/risk/{risk_id}", response_model=list[SignalResponse])
+@router.get(path="/risk/{risk_id}", response_model=list[SignalResponse])
 def get_signals_for_risk_endpoint(risk_id: int) -> list[SignalResponse]:
     """Get all signals for a specific risk."""
     with get_db() as db:
         # Verify risk exists
-        risk = get_risk(db, risk_id)
+        risk: RiskModel | None = get_risk(db=db, risk_id=risk_id)
         if not risk:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
             )
 
-        db_signals = get_signals_for_risk(db, risk_id)
+        db_signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk_id)
 
         return [
             SignalResponse(
@@ -128,12 +128,12 @@ def get_signals_for_risk_endpoint(risk_id: int) -> list[SignalResponse]:
         ]
 
 
-@router.put("/{signal_id}", response_model=SignalResponse)
+@router.put(path="/{signal_id}", response_model=SignalResponse)
 def update_signal_endpoint(signal_id: int, signal: SignalUpdate) -> SignalResponse:
     """Update an existing signal."""
     with get_db() as db:
         # Filter out None values
-        update_data = {k: v for k, v in signal.model_dump().items() if v is not None}
+        update_data: dict[str, Any] = {k: v for k, v in signal.model_dump().items() if v is not None}
 
         if not update_data:
             raise HTTPException(
@@ -141,7 +141,7 @@ def update_signal_endpoint(signal_id: int, signal: SignalUpdate) -> SignalRespon
                 detail="No update data provided",
             )
 
-        db_signal = update_signal(db, signal_id, update_data)
+        db_signal: SignalModel | None = update_signal(db=db, signal_id=signal_id, signal_data=update_data)
         if not db_signal:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Signal not found"
@@ -159,11 +159,11 @@ def update_signal_endpoint(signal_id: int, signal: SignalUpdate) -> SignalRespon
         )
 
 
-@router.delete("/{signal_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(path="/{signal_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_signal_endpoint(signal_id: int) -> None:
     """Delete a signal."""
     with get_db() as db:
-        success = delete_signal(db, signal_id)
+        success: bool = delete_signal(db=db, signal_id=signal_id)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Signal not found"

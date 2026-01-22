@@ -1,14 +1,14 @@
 """FastAPI routes for Risk CRUD operations."""
 
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
-from domain.models import (Assessment, Risk, RiskCategory, RiskWithSignals,
-                           Signal)
+from domain.models import Assessment, Risk, RiskCategory, Signal
 from domain.scoring import assess_risk
-from persistence.database import (create_assessment, create_risk, delete_risk,
+from persistence.database import (AssessmentModel, RiskModel, SignalModel,
+                                  create_assessment, create_risk, delete_risk,
                                   get_all_risks, get_db, get_risk,
                                   get_signals_for_risk, update_risk)
 
@@ -59,15 +59,15 @@ class RiskResponse(BaseModel):
 
 
 # Endpoints
-@router.post("/", response_model=RiskResponse, status_code=status.HTTP_201_CREATED)
+@router.post(path="/", response_model=RiskResponse, status_code=status.HTTP_201_CREATED)
 def create_risk_endpoint(risk: RiskCreate) -> RiskResponse:
     """Create a new risk."""
     with get_db() as db:
         # Validate using domain model
-        domain_risk = Risk(**risk.model_dump())
+        _ = Risk(**risk.model_dump())
 
         # Create in database
-        db_risk = create_risk(db, risk.model_dump())
+        db_risk: RiskModel = create_risk(db=db, risk_data=risk.model_dump())
 
         return RiskResponse(
             id=db_risk.id,
@@ -83,11 +83,11 @@ def create_risk_endpoint(risk: RiskCreate) -> RiskResponse:
         )
 
 
-@router.get("/{risk_id}", response_model=RiskResponse)
+@router.get(path="/{risk_id}", response_model=RiskResponse)
 def get_risk_endpoint(risk_id: int) -> RiskResponse:
     """Get a risk by ID."""
     with get_db() as db:
-        db_risk = get_risk(db, risk_id)
+        db_risk: RiskModel | None = get_risk(db=db, risk_id=risk_id)
         if not db_risk:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
@@ -107,13 +107,13 @@ def get_risk_endpoint(risk_id: int) -> RiskResponse:
         )
 
 
-@router.get("/", response_model=list[RiskResponse])
+@router.get(path="/", response_model=list[RiskResponse])
 def get_all_risks_endpoint(
     skip: int = 0, limit: int = 100, category: Optional[RiskCategory] = None
 ) -> list[RiskResponse]:
     """Get all risks with optional filtering."""
     with get_db() as db:
-        db_risks = get_all_risks(db, skip=skip, limit=limit, category=category)
+        db_risks: list[RiskModel] = get_all_risks(db=db, skip=skip, limit=limit, category=category)
 
         return [
             RiskResponse(
@@ -132,12 +132,12 @@ def get_all_risks_endpoint(
         ]
 
 
-@router.put("/{risk_id}", response_model=RiskResponse)
+@router.put(path="/{risk_id}", response_model=RiskResponse)
 def update_risk_endpoint(risk_id: int, risk: RiskUpdate) -> RiskResponse:
     """Update an existing risk."""
     with get_db() as db:
         # Filter out None values
-        update_data = {k: v for k, v in risk.model_dump().items() if v is not None}
+        update_data: dict[str, Any] = {k: v for k, v in risk.model_dump().items() if v is not None}
 
         if not update_data:
             raise HTTPException(
@@ -145,7 +145,7 @@ def update_risk_endpoint(risk_id: int, risk: RiskUpdate) -> RiskResponse:
                 detail="No update data provided",
             )
 
-        db_risk = update_risk(db, risk_id, update_data)
+        db_risk: RiskModel | None = update_risk(db=db, risk_id=risk_id, risk_data=update_data)
         if not db_risk:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
@@ -169,24 +169,24 @@ def update_risk_endpoint(risk_id: int, risk: RiskUpdate) -> RiskResponse:
 def delete_risk_endpoint(risk_id: int) -> None:
     """Delete a risk."""
     with get_db() as db:
-        success = delete_risk(db, risk_id)
+        success: bool = delete_risk(db=db, risk_id=risk_id)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
             )
 
 
-@router.get("/{risk_id}/with-signals", response_model=dict)
-def get_risk_with_signals_endpoint(risk_id: int) -> dict:
+@router.get(path="/{risk_id}/with-signals", response_model=dict[str, Any])
+def get_risk_with_signals_endpoint(risk_id: int) -> dict[str, Any]:
     """Get a risk with all its signals."""
     with get_db() as db:
-        db_risk = get_risk(db, risk_id)
+        db_risk: RiskModel | None = get_risk(db=db, risk_id=risk_id)
         if not db_risk:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
             )
 
-        db_signals = get_signals_for_risk(db, risk_id)
+        db_signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk_id)
 
         # Convert to domain models
         domain_risk = Risk(
@@ -202,7 +202,7 @@ def get_risk_with_signals_endpoint(risk_id: int) -> dict:
             updated_at=db_risk.updated_at,
         )
 
-        domain_signals = [
+        domain_signals: list[Signal] = [
             Signal(
                 id=signal.id,
                 risk_id=signal.risk_id,
@@ -222,17 +222,17 @@ def get_risk_with_signals_endpoint(risk_id: int) -> dict:
         }
 
 
-@router.post("/{risk_id}/assess", response_model=dict)
-def assess_risk_endpoint(risk_id: int) -> dict:
+@router.post(path="/{risk_id}/assess", response_model=dict[str, Any])
+def assess_risk_endpoint(risk_id: int) -> dict[str, Any]:
     """Generate a new assessment for a risk."""
     with get_db() as db:
-        db_risk = get_risk(db, risk_id)
+        db_risk: RiskModel | None = get_risk(db=db, risk_id=risk_id)
         if not db_risk:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
             )
 
-        db_signals = get_signals_for_risk(db, risk_id)
+        db_signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk_id)
 
         # Convert to domain models
         domain_risk = Risk(
@@ -246,7 +246,7 @@ def assess_risk_endpoint(risk_id: int) -> dict:
             time_horizon=db_risk.time_horizon,
         )
 
-        domain_signals = [
+        domain_signals: list[Signal] = [
             Signal(
                 id=signal.id,
                 risk_id=signal.risk_id,
@@ -260,11 +260,11 @@ def assess_risk_endpoint(risk_id: int) -> dict:
         ]
 
         # Generate assessment
-        assessment = assess_risk(domain_risk, domain_signals)
+        assessment: Assessment = assess_risk(risk=domain_risk, signals=domain_signals)
 
         # Save to database
-        assessment_data = assessment.model_dump(exclude={"id"})
-        db_assessment = create_assessment(db, assessment_data)
+        assessment_data: dict[str, Any] = assessment.model_dump(exclude={"id"})
+        db_assessment: AssessmentModel = create_assessment(db=db, assessment_data=assessment_data)
 
         return {
             "assessment": {

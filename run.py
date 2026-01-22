@@ -9,11 +9,11 @@ import argparse
 import subprocess
 import sys
 from pathlib import Path
-
 from requests import Response
+from persistence.database import RiskModel
 
 
-def print_banner():
+def print_banner() -> None:
     """Print application banner."""
     banner = """
 ╔══════════════════════════════════════════════════════════╗
@@ -49,20 +49,20 @@ def run_streamlit() -> None:
     print()
     
     try:
-        subprocess.run(["streamlit", "run", "main.py"])
+        subprocess.run(args=["streamlit", "run", "main.py"])
     except KeyboardInterrupt:
         print("\n✋ Streamlit stopped")
 
 
-def run_tests():
+def run_tests() -> None:
     """Run API tests."""
     print("🧪 Running API tests...")
     print()
     
     # Check if API is running
     import socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    result = sock.connect_ex(('localhost', 8000))
+    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+    result: int = sock.connect_ex(('localhost', 8000))
     sock.close()
     
     if result != 0:
@@ -70,10 +70,10 @@ def run_tests():
         print("💡 Start the API first: python run.py api")
         sys.exit(1)
     
-    subprocess.run([sys.executable, "test_api.py"])
+    subprocess.run(args=[sys.executable, "test_api.py"])
 
 
-def init_db():
+def init_db() -> None:
     """Initialize the database."""
     print("🗄️  Initializing database...")
     
@@ -105,7 +105,7 @@ def load_sample_data() -> None:
     # Upload sample risks
     risks_file = Path("examples/sample_risks.csv")
     if risks_file.exists():
-        with open(risks_file, "rb") as f:
+        with open(file=risks_file, mode="rb") as f:
             files = {"file": (risks_file.name, f, "text/csv")}
             response = requests.post(
                 f"{base_url}/api/data-input/upload/risks/csv",
@@ -121,12 +121,12 @@ def load_sample_data() -> None:
     signals_file = Path("examples/sample_signals.csv")
     if signals_file.exists():
         # First check if we have risks
-        response = requests.get(f"{base_url}/api/risks/")
+        response = requests.get(url=f"{base_url}/api/risks/")
         if response.status_code == 200 and len(response.json()) > 0:
-            with open(signals_file, "rb") as f:
+            with open(file=signals_file, mode="rb") as f:
                 files = {"file": (signals_file.name, f, "text/csv")}
                 response = requests.post(
-                    f"{base_url}/api/data-input/upload/signals/csv",
+                    url=f"{base_url}/api/data-input/upload/signals/csv",
                     files=files
                 )
                 if response.status_code == 200:
@@ -138,7 +138,7 @@ def load_sample_data() -> None:
     print("\n📊 Sample data loaded successfully!")
 
 
-def show_status():
+def show_status() -> None:
     """Show system status."""
     print("📊 System Status")
     print("=" * 60)
@@ -146,21 +146,21 @@ def show_status():
     # Check database
     db_file = Path("personal_risk_radar.db")
     if db_file.exists():
-        size = db_file.stat().st_size
+        size: int = db_file.stat().st_size
         print(f"✅ Database: {db_file.name} ({size:,} bytes)")
         
         # Count records
         from persistence.database import get_all_risks, get_db
         with get_db() as db:
-            risks = get_all_risks(db)
+            risks: list[RiskModel] = get_all_risks(db=db)
             print(f"   📈 Risks: {len(risks)}")
     else:
         print("❌ Database: Not initialized")
     
     # Check API
     import socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    result = sock.connect_ex(('localhost', 8000))
+    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+    result: int = sock.connect_ex(('localhost', 8000))
     sock.close()
     
     if result == 0:
@@ -181,7 +181,7 @@ def show_status():
     print("=" * 60)
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(
         description="Personal Risk Radar - Unified Control Script",
@@ -222,12 +222,12 @@ Examples:
         help="Disable auto-reload for API server"
     )
     
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
     
     print_banner()
     
     if args.command == "api":
-        run_api(args.host, args.port, not args.no_reload)
+        run_api(host=args.host, port=args.port, reload=not args.no_reload)
     elif args.command == "ui":
         run_streamlit()
     elif args.command == "test":
