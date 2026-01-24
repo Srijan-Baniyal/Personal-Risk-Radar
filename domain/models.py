@@ -2,9 +2,12 @@
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, Field, field_validator
+
+if TYPE_CHECKING:
+    from persistence.database import SignalModel
 
 
 class RiskCategory(str, Enum):
@@ -90,19 +93,41 @@ class Signal(BaseModel):
             Modifier value (positive for increase, negative for decrease)
         """
         # Base modifiers by strength
-        modifiers = {
+        modifiers: dict[SignalStrength, float] = {
             SignalStrength.WEAK: 0.05,
             SignalStrength.MEDIUM: 0.10,
             SignalStrength.STRONG: 0.20,
         }
 
-        modifier = modifiers[self.strength]
+        modifier: float = modifiers[self.strength]
 
         # Flip sign for decrease signals
         if self.direction == SignalDirection.DECREASE:
             modifier = -modifier
 
         return modifier
+
+    @classmethod
+    def from_db_model(cls, db_signal: "SignalModel") -> "Signal":
+        """
+        Create a Signal from a database SignalModel.
+
+        Args:
+            db_signal: SignalModel instance from database
+
+        Returns:
+            Signal domain model
+        """
+        return cls(
+            id=db_signal.id,
+            risk_id=db_signal.risk_id,
+            name=db_signal.name,
+            description=db_signal.description,
+            direction=db_signal.direction,
+            strength=db_signal.strength,
+            observed_at=db_signal.observed_at,
+            created_at=db_signal.created_at,
+        )
 
 
 class Assessment(BaseModel):

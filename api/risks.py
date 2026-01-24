@@ -6,10 +6,11 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from domain.models import Assessment, Risk, RiskCategory, Signal
-from domain.scoring import assess_risk
+from domain.scoring import assess_all_risks, assess_risk
 from persistence.database import (AssessmentModel, RiskModel, SignalModel,
                                   create_assessment, create_risk, delete_risk,
-                                  get_all_risks, get_db, get_risk,
+                                  get_all_risks, get_all_risks_with_signals,
+                                  get_db, get_risk, get_risk_with_signals,
                                   get_signals_for_risk, update_risk)
 
 router = APIRouter(prefix="/api/risks", tags=["risks"])
@@ -175,6 +176,138 @@ def delete_risk_endpoint(risk_id: int) -> None:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
             )
 
+class AssessmentResponse(BaseModel):
+    """Response model for assessment."""
+
+    id: int
+    risk_id: int
+    effective_likelihood: float
+    impact: int
+    confidence: float
+    risk_score: float
+    signal_count: int
+    assessed_at: str
+
+    class Config:
+        from_attributes = True
+
+
+@router.post(path="/{risk_id}/recompute", response_model=AssessmentResponse, status_code=status.HTTP_201_CREATED)
+def recompute_risk_endpoint(risk_id: int) -> AssessmentResponse:
+    """Recompute risk score based on current signals and create new assessment."""
+    with get_db() as db:
+        # Get risk with signals
+        result: Optional[tuple[RiskModel, list[SignalModel]]] = get_risk_with_signals(db=db, risk_id=risk_id)
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
+            )
+        
+        db_risk, db_signals = result
+        
+        # Convert to domain models
+        risk: Risk = Risk(
+            id=db_risk.id,
+            category=db_risk.category,
+            name=db_risk.name,
+            description=db_risk.description,
+            base_likelihood=db_risk.base_likelihood,
+            impact=db_risk.impact,
+            confidence=db_risk.confidence,
+            time_horizon=db_risk.time_horizon,
+            created_at=db_risk.created_at,
+            updated_at=db_risk.updated_at,
+        )
+        
+        signals: list[Signal] = [Signal.from_db_model(db_signal=s) for s in db_signals]
+        
+        # Compute assessment
+        assessment: Assessment = assess_risk(risk=risk, signals=signals)
+        
+        # Save assessment to database
+        db_assessment: AssessmentModel = create_assessment(
+            db=db,
+            assessment_data={
+                "risk_id": assessment.risk_id,
+                "effective_likelihood": assessment.effective_likelihood,
+                "impact": assessment.impact,
+                "confidence": assessment.confidence,
+                "risk_score": assessment.risk_score,
+                "signal_count": assessment.signal_count,
+                "assessed_at": assessment.assessed_at,
+            },
+        )
+        
+        return AssessmentResponse(
+            id=db_assessment.id,
+            risk_id=db_assessment.risk_id,
+            effective_likelihood=db_assessment.effective_likelihood,
+            impact=db_assessment.impact,
+            confidence=db_assessment.confidence,
+            risk_score=db_assessment.risk_score,
+            signal_count=db_assessment.signal_count,
+            assessed_at=db_assessment.assessed_at.isoformat(),
+        )
+
+
+@router.post(path="/recompute", response_model=list[AssessmentResponse], status_code=status.HTTP_201_CREATED)
+def recompute_all_risks_endpoint() -> list[AssessmentResponse]:
+    """Recompute all risk scores based on current signals and create new assessments."""
+    with get_db() as db:
+        # Get all risks with their signals
+        risks_with_signals_db: list[tuple[RiskModel, list[SignalModel]]] = get_all_risks_with_signals(db=db)
+        
+        # Convert to domain models
+        risks_with_signals: list[tuple[Risk, list[Signal]]] = []
+        for db_risk, db_signals in risks_with_signals_db:
+            risk: Risk = Risk(
+                id=db_risk.id,
+                category=db_risk.category,
+                name=db_risk.name,
+                description=db_risk.description,
+                base_likelihood=db_risk.base_likelihood,
+                impact=db_risk.impact,
+                confidence=db_risk.confidence,
+                time_horizon=db_risk.time_horizon,
+                created_at=db_risk.created_at,
+                updated_at=db_risk.updated_at,
+            )
+            signals: list[Signal] = [Signal.from_db_model(db_signal=s) for s in db_signals]
+            risks_with_signals.append((risk, signals))
+        
+        # Compute all assessments
+        assessments: list[Assessment] = assess_all_risks(risks_with_signals=risks_with_signals)
+        
+        # Save all assessments to database
+        db_assessments: list[AssessmentModel] = []
+        for assessment in assessments:
+            db_assessment: AssessmentModel = create_assessment(
+                db=db,
+                assessment_data={
+                    "risk_id": assessment.risk_id,
+                    "effective_likelihood": assessment.effective_likelihood,
+                    "impact": assessment.impact,
+                    "confidence": assessment.confidence,
+                    "risk_score": assessment.risk_score,
+                    "signal_count": assessment.signal_count,
+                    "assessed_at": assessment.assessed_at,
+                },
+            )
+            db_assessments.append(db_assessment)
+        
+        return [
+            AssessmentResponse(
+                id=db_assessment.id,
+                risk_id=db_assessment.risk_id,
+                effective_likelihood=db_assessment.effective_likelihood,
+                impact=db_assessment.impact,
+                confidence=db_assessment.confidence,
+                risk_score=db_assessment.risk_score,
+                signal_count=db_assessment.signal_count,
+                assessed_at=db_assessment.assessed_at.isoformat(),
+            )
+            for db_assessment in db_assessments
+        ]
 
 @router.get(path="/{risk_id}/with-signals", response_model=dict[str, Any])
 def get_risk_with_signals_endpoint(risk_id: int) -> dict[str, Any]:

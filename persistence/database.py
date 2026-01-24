@@ -239,3 +239,25 @@ def get_latest_assessments(db: Session, limit: int = 100) -> list[AssessmentMode
         .limit(limit=limit)
         .all()
     )
+
+
+def get_risk_with_signals(db: Session, risk_id: int) -> Optional[tuple[RiskModel, list[SignalModel]]]:
+    """Get a risk along with all its signals."""
+    risk: Optional[RiskModel] = get_risk(db=db, risk_id=risk_id)
+    if not risk:
+        return None
+    
+    signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk_id)
+    return (risk, signals)
+
+
+def get_all_risks_with_signals(db: Session) -> list[tuple[RiskModel, list[SignalModel]]]:
+    """Get all risks along with their signals."""
+    risks: list[RiskModel] = get_all_risks(db=db, limit=1000)
+    
+    results: list[tuple[RiskModel, list[SignalModel]]] = []
+    for risk in risks:
+        signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk.id)
+        results.append((risk, signals))
+    
+    return results

@@ -149,17 +149,82 @@ personal_risk_radar/
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/personal_risk_radar.git
+git clone https://github.com/Srijan-Baniyal/Personal-Risk-Radar.git
 cd personal_risk_radar
 
-# Install dependencies with uv
+# Create virtual environment and install dependencies
 uv sync
 
-# Run the application
+# Initialize the database
+uv run python -c "from persistence.database import init_db; init_db()"
+```
+
+### Running the Application
+
+#### Option 1: Streamlit Dashboard (Recommended)
+
+```bash
 uv run streamlit run main.py
 ```
 
+Open your browser to `http://localhost:8501`
+
+#### Option 2: FastAPI Server Only
+
+```bash
+uv run uvicorn api.main:app --reload
+```
+
+API will be available at `http://localhost:8000`
+
+- Interactive docs: `http://localhost:8000/docs`
+- Alternative docs: `http://localhost:8000/redoc`
+
+#### Option 3: Both (Development Mode)
+
+```bash
+# Terminal 1: Start API server
+uv run uvicorn api.main:app --reload
+
+# Terminal 2: Start Streamlit dashboard
+uv run streamlit run main.py
+```
+
+### Testing
+
+#### Run Unit Tests (No server required)
+
+```bash
+# Test domain models and scoring logic
+uv run python tests/test_domain.py
+```
+
+#### Run Integration Tests (Requires API server)
+
+```bash
+# Terminal 1: Start the API server
+uv run uvicorn api.main:app --reload
+
+# Terminal 2: Run integration tests
+uv run python tests/test_recompute.py
+```
+
+#### Run All Tests
+
+```bash
+# Run unit tests
+uv run python tests/test_domain.py
+
+# Start server in background, run integration tests, then stop server
+uv run uvicorn api.main:app --reload &
+sleep 3
+uv run python tests/test_recompute.py
+pkill -f "uvicorn api.main:app"
+```
+
 ### Development
+
+#### Code Quality
 
 ```bash
 # Format code
@@ -168,8 +233,116 @@ uv run ruff format .
 # Lint code
 uv run ruff check .
 
-# Type check
-uv run ty check
+# Fix auto-fixable lint issues
+uv run ruff check --fix .
+
+# Type check (if using pyright/myright)
+uv run python -m pyright
+```
+
+#### Database Management
+
+```bash
+# Reset database (WARNING: Deletes all data)
+rm personal_risk_radar.db
+uv run python -c "from persistence.database import init_db; init_db()"
+
+# Check database exists
+ls -lh personal_risk_radar.db
+```
+
+#### Quick API Test
+
+```bash
+# Check API health
+curl http://localhost:8000/health
+
+# Create a test risk
+curl -X POST http://localhost:8000/api/risks/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "category": "technical",
+    "name": "Test Risk",
+    "base_likelihood": 0.5,
+    "impact": 3,
+    "confidence": 0.8,
+    "time_horizon": "weeks"
+  }'
+
+# Get all risks
+curl http://localhost:8000/api/risks/
+```
+
+---
+
+## 🧪 Test Coverage
+
+### Unit Tests (`tests/test_domain.py`)
+
+Tests domain logic without external dependencies:
+
+- ✅ Signal likelihood modifier calculations
+  - WEAK: ±0.05 (5%)
+  - MEDIUM: ±0.10 (10%)
+  - STRONG: ±0.20 (20%)
+- ✅ Effective likelihood calculation with multiple signals
+- ✅ Likelihood clamping to [0.0, 1.0]
+- ✅ Risk score formula: `likelihood × impact × confidence`
+- ✅ Full risk assessment workflow
+- ✅ Input validation for Risk model
+
+### Integration Tests (`tests/test_recompute.py`)
+
+Tests API endpoints with database:
+
+- ✅ Single risk recompute with signals
+- ✅ Recompute all risks endpoint
+- ✅ Signal modifier verification for all strengths/directions
+- ✅ Likelihood boundary clamping (upper/lower bounds)
+- ✅ Assessment persistence in database
+
+### Example Test Output
+
+```bash
+$ uv run python tests/test_domain.py
+
+Running unit tests...
+
+✓ Signal likelihood modifiers correct
+✓ Effective likelihood calculation correct
+✓ Risk score calculation correct
+✓ Risk assessment correct
+✓ Risk model validation works
+
+✅ All unit tests passed!
+```
+
+```bash
+$ uv run python tests/test_recompute.py
+
+Starting recompute endpoint tests...
+
+Created risk with ID: 1
+Created signal: Positive Signal
+Created signal: Negative Signal
+
+=== Assessment Result ===
+Risk ID: 1
+Base Likelihood: 0.5
+Effective Likelihood: 0.65
+Impact: 3
+Confidence: 0.8
+Risk Score: 1.56
+Signal Count: 2
+
+✓ Likelihood calculation correct: 0.65
+✓ Risk score calculation correct: 1.56
+
+=== Testing Recompute All ===
+Recomputed 1 risks
+  - Risk 1: score=1.56, likelihood=0.65, signals=2
+
+✅ All tests passed!
 ```
 
 ---
