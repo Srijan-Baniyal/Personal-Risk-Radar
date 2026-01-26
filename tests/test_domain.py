@@ -1,9 +1,19 @@
 """Unit tests for domain models and scoring logic."""
 
-from domain.models import (Risk, RiskCategory, Signal, SignalDirection,
-                           SignalStrength, TimeHorizon)
-from domain.scoring import (assess_risk, calculate_effective_likelihood,
-                            calculate_risk_score)
+from domain.models import (
+    Assessment,
+    Risk,
+    RiskCategory,
+    Signal,
+    SignalDirection,
+    SignalStrength,
+    TimeHorizon,
+)
+from domain.scoring import (
+    assess_risk,
+    calculate_effective_likelihood,
+    calculate_risk_score,
+)
 
 
 def test_signal_likelihood_modifiers() -> None:
@@ -17,38 +27,38 @@ def test_signal_likelihood_modifiers() -> None:
         strength=SignalStrength.WEAK,
     )
     assert signal.get_likelihood_modifier() == 0.05
-    
+
     signal.direction = SignalDirection.DECREASE
     assert signal.get_likelihood_modifier() == -0.05
-    
+
     # Test MEDIUM signals
     signal.strength = SignalStrength.MEDIUM
     signal.direction = SignalDirection.INCREASE
     assert signal.get_likelihood_modifier() == 0.10
-    
+
     signal.direction = SignalDirection.DECREASE
     assert signal.get_likelihood_modifier() == -0.10
-    
+
     # Test STRONG signals
     signal.strength = SignalStrength.STRONG
     signal.direction = SignalDirection.INCREASE
     assert signal.get_likelihood_modifier() == 0.20
-    
+
     signal.direction = SignalDirection.DECREASE
     assert signal.get_likelihood_modifier() == -0.20
-    
+
     print("✓ Signal likelihood modifiers correct")
 
 
 def test_calculate_effective_likelihood() -> None:
     """Test effective likelihood calculation with signals."""
     base_likelihood = 0.5
-    
+
     # No signals
     signals: list[Signal] = []
-    result = calculate_effective_likelihood(base_likelihood, signals)
+    result: float = calculate_effective_likelihood(base_likelihood=base_likelihood, signals=signals)
     assert result == 0.5
-    
+
     # Single increase signal
     signals = [
         Signal(
@@ -59,9 +69,9 @@ def test_calculate_effective_likelihood() -> None:
             strength=SignalStrength.STRONG,
         )
     ]
-    result = calculate_effective_likelihood(base_likelihood, signals)
+    result = calculate_effective_likelihood(base_likelihood=base_likelihood, signals=signals)
     assert result == 0.7  # 0.5 + 0.2
-    
+
     # Multiple signals
     signals = [
         Signal(
@@ -79,9 +89,9 @@ def test_calculate_effective_likelihood() -> None:
             strength=SignalStrength.WEAK,
         ),
     ]
-    result = calculate_effective_likelihood(base_likelihood, signals)
+    result = calculate_effective_likelihood(base_likelihood=base_likelihood, signals=signals)
     assert abs(result - 0.65) < 0.01  # 0.5 + 0.2 - 0.05
-    
+
     # Test clamping upper bound
     signals = [
         Signal(
@@ -93,9 +103,9 @@ def test_calculate_effective_likelihood() -> None:
         )
         for i in range(10)
     ]
-    result = calculate_effective_likelihood(0.9, signals)
+    result = calculate_effective_likelihood(base_likelihood=0.9, signals=signals)
     assert result == 1.0
-    
+
     # Test clamping lower bound
     signals = [
         Signal(
@@ -107,26 +117,26 @@ def test_calculate_effective_likelihood() -> None:
         )
         for i in range(10)
     ]
-    result = calculate_effective_likelihood(0.1, signals)
+    result = calculate_effective_likelihood(base_likelihood=0.1, signals=signals)
     assert result == 0.0
-    
+
     print("✓ Effective likelihood calculation correct")
 
 
 def test_calculate_risk_score() -> None:
     """Test risk score calculation."""
     # Standard case
-    score = calculate_risk_score(likelihood=0.5, impact=3, confidence=0.8)
+    score: float= calculate_risk_score(likelihood=0.5, impact=3, confidence=0.8)
     assert abs(score - 1.2) < 0.01
-    
+
     # Maximum score
-    score = calculate_risk_score(likelihood=1.0, impact=5, confidence=1.0)
+    score: float= calculate_risk_score(likelihood=1.0, impact=5, confidence=1.0)
     assert score == 5.0
-    
+
     # Minimum score
-    score = calculate_risk_score(likelihood=0.0, impact=1, confidence=0.0)
+    score: float= calculate_risk_score(likelihood=0.0, impact=1, confidence=0.0)
     assert score == 0.0
-    
+
     print("✓ Risk score calculation correct")
 
 
@@ -141,8 +151,8 @@ def test_assess_risk() -> None:
         confidence=0.8,
         time_horizon=TimeHorizon.MONTHS,
     )
-    
-    signals = [
+
+    signals: list[Signal] = [
         Signal(
             id=1,
             risk_id=1,
@@ -158,21 +168,21 @@ def test_assess_risk() -> None:
             strength=SignalStrength.WEAK,
         ),
     ]
-    
-    assessment = assess_risk(risk, signals)
-    
+
+    assessment: Assessment = assess_risk(risk=risk, signals=signals)
+
     # Check effective likelihood: 0.5 + 0.2 - 0.05 = 0.65
     assert abs(assessment.effective_likelihood - 0.65) < 0.01
-    
+
     # Check risk score: 0.65 * 3 * 0.8 = 1.56
     assert abs(assessment.risk_score - 1.56) < 0.01
-    
+
     # Check other fields
     assert assessment.risk_id == 1
     assert assessment.impact == 3
     assert assessment.confidence == 0.8
     assert assessment.signal_count == 2
-    
+
     print("✓ Risk assessment correct")
 
 
@@ -188,7 +198,7 @@ def test_risk_model_validation() -> None:
         time_horizon=TimeHorizon.WEEKS,
     )
     assert risk.base_likelihood == 0.5
-    
+
     # Test likelihood bounds
     try:
         Risk(
@@ -202,7 +212,7 @@ def test_risk_model_validation() -> None:
         assert False, "Should have raised validation error"
     except ValueError:
         pass
-    
+
     # Test impact bounds
     try:
         Risk(
@@ -216,7 +226,7 @@ def test_risk_model_validation() -> None:
         assert False, "Should have raised validation error"
     except ValueError:
         pass
-    
+
     print("✓ Risk model validation works")
 
 

@@ -63,7 +63,9 @@ def test_assess_risk(risk_id: int) -> dict[str, Any]:
     if response.status_code == 200:
         assessment: dict[str, Any] = response.json()
         print(f"Assessment Risk Score: {assessment['assessment']['risk_score']:.3f}")
-        print(f"Effective Likelihood: {assessment['assessment']['effective_likelihood']:.3f}")
+        print(
+            f"Effective Likelihood: {assessment['assessment']['effective_likelihood']:.3f}"
+        )
         return assessment
     else:
         print(f"Error: {response.text}")
@@ -95,14 +97,18 @@ Career stagnation,career,0.4,3,0.7,months,Lack of skill development
 Budget overrun,financial,0.25,4,0.85,weeks,Project exceeds allocated budget
 Chronic stress,health,0.6,3,0.9,months,Sustained high workload"""
 
-    files: dict[str, tuple[str, str, str]] = {"file": ("test_risks.csv", csv_content, "text/csv")}
+    files: dict[str, tuple[str, str, str]] = {
+        "file": ("test_risks.csv", csv_content, "text/csv")
+    }
 
     response: requests.Response = requests.post(url=url, files=files)
     print(f"Upload CSV Status: {response.status_code}")
     if response.status_code == 200:
         result: dict[str, Any] = response.json()
-        print(f"Records Created: {result['records_created']}/{result['records_processed']}")
-        if result['errors']:
+        print(
+            f"Records Created: {result['records_created']}/{result['records_processed']}"
+        )
+        if result["errors"]:
             print(f"Errors: {result['errors']}")
     else:
         print(f"Error: {response.text}")

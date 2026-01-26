@@ -7,9 +7,21 @@ import pandas as pd
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, ValidationError
 
-from domain.models import (Risk, RiskCategory, Signal, SignalDirection,
-                           SignalStrength, TimeHorizon)
-from persistence.database import RiskModel, SignalModel, create_risk, create_signal, get_db # type: ignore
+from domain.models import (
+    Risk,
+    RiskCategory,
+    Signal,
+    SignalDirection,
+    SignalStrength,
+    TimeHorizon,
+)
+from persistence.database import (
+    RiskModel,
+    SignalModel,
+    create_risk,
+    create_signal,
+    get_db,
+)  # type: ignore
 
 router = APIRouter(prefix="/api/data-input", tags=["data-input"])
 
@@ -72,13 +84,32 @@ def validate_and_clean_risk_data(row: dict[str, Any]) -> Optional[dict[str, Any]
         horizon_fields: list[str] = ["time_horizon", "horizon", "timeframe"]
         # Extract fields with fallbacks
         name: Any | None = next((row.get(f) for f in name_fields if row.get(f)), None)
-        category: Any | None = next((row.get(f) for f in category_fields if row.get(f)), None)
-        likelihood: Any | None = next((row.get(f) for f in likelihood_fields if row.get(f) is not None), None)
-        impact: Any | None = next((row.get(f) for f in impact_fields if row.get(f) is not None), None)
-        confidence: Any | None = next((row.get(f) for f in confidence_fields if row.get(f) is not None), None)
-        horizon: Any | None = next((row.get(f) for f in horizon_fields if row.get(f)), None)
+        category: Any | None = next(
+            (row.get(f) for f in category_fields if row.get(f)), None
+        )
+        likelihood: Any | None = next(
+            (row.get(f) for f in likelihood_fields if row.get(f) is not None), None
+        )
+        impact: Any | None = next(
+            (row.get(f) for f in impact_fields if row.get(f) is not None), None
+        )
+        confidence: Any | None = next(
+            (row.get(f) for f in confidence_fields if row.get(f) is not None), None
+        )
+        horizon: Any | None = next(
+            (row.get(f) for f in horizon_fields if row.get(f)), None
+        )
 
-        if not all([name, category, likelihood is not None, impact is not None, confidence is not None, horizon]):
+        if not all(
+            [
+                name,
+                category,
+                likelihood is not None,
+                impact is not None,
+                confidence is not None,
+                horizon,
+            ]
+        ):
             return None
 
         # Normalize category
@@ -126,9 +157,15 @@ def validate_and_clean_signal_data(row: dict[str, Any]) -> Optional[dict[str, An
 
         # Extract fields with fallbacks
         name: Any | None = next((row.get(f) for f in name_fields if row.get(f)), None)
-        risk_id: Any | None = next((row.get(f) for f in risk_id_fields if row.get(f) is not None), None)
-        direction: Any | None = next((row.get(f) for f in direction_fields if row.get(f)), None)
-        strength: Any | None = next((row.get(f) for f in strength_fields if row.get(f)), None)
+        risk_id: Any | None = next(
+            (row.get(f) for f in risk_id_fields if row.get(f) is not None), None
+        )
+        direction: Any | None = next(
+            (row.get(f) for f in direction_fields if row.get(f)), None
+        )
+        strength: Any | None = next(
+            (row.get(f) for f in strength_fields if row.get(f)), None
+        )
 
         if not all([name, risk_id is not None, direction, strength]):
             return None
@@ -183,7 +220,9 @@ async def upload_risks_csv(file: UploadFile = File(default=...)) -> DataUploadRe
             processed += 1
             row_dict: dict[Any, Any] = row.to_dict()  # type: ignore[assignment]
 
-            cleaned_data: dict[str, Any] | None = validate_and_clean_risk_data(row=row_dict)
+            cleaned_data: dict[str, Any] | None = validate_and_clean_risk_data(
+                row=row_dict
+            )
             if cleaned_data:
                 try:
                     create_risk(db=db, risk_data=cleaned_data)  # type: ignore[arg-type]
@@ -198,12 +237,14 @@ async def upload_risks_csv(file: UploadFile = File(default=...)) -> DataUploadRe
         message=f"Processed {processed} rows, created {created} risks",
         records_processed=processed,
         records_created=created,
-        errors=errors[:10],  #type: ignore[arg-type]
+        errors=errors[:10],  # type: ignore[arg-type]
     )
 
 
 @router.post(path="/upload/risks/excel", response_model=DataUploadResponse)
-async def upload_risks_excel(file: UploadFile = File(default=...)) -> DataUploadResponse:
+async def upload_risks_excel(
+    file: UploadFile = File(default=...),
+) -> DataUploadResponse:
     """Upload risks from an Excel file."""
     if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
         raise HTTPException(
@@ -223,7 +264,9 @@ async def upload_risks_excel(file: UploadFile = File(default=...)) -> DataUpload
             processed += 1
             row_dict: dict[Any, Any] = row.to_dict()  # type: ignore[assignment]
 
-            cleaned_data: dict[str, Any] | None = validate_and_clean_risk_data(row=row_dict)
+            cleaned_data: dict[str, Any] | None = validate_and_clean_risk_data(
+                row=row_dict
+            )
             if cleaned_data:
                 try:
                     create_risk(db=db, risk_data=cleaned_data)  # type: ignore[arg-type]
@@ -243,7 +286,9 @@ async def upload_risks_excel(file: UploadFile = File(default=...)) -> DataUpload
 
 
 @router.post(path="/upload/signals/csv", response_model=DataUploadResponse)
-async def upload_signals_csv(file: UploadFile = File(default=...)) -> DataUploadResponse:
+async def upload_signals_csv(
+    file: UploadFile = File(default=...),
+) -> DataUploadResponse:
     """Upload signals from a CSV file."""
     if not file.filename or not file.filename.endswith(".csv"):
         raise HTTPException(
@@ -261,9 +306,11 @@ async def upload_signals_csv(file: UploadFile = File(default=...)) -> DataUpload
     with get_db() as db:
         for idx, row in df.iterrows():
             processed += 1
-            row_dict: dict[Any, Any]     = row.to_dict()  # type: ignore[assignment]
+            row_dict: dict[Any, Any] = row.to_dict()  # type: ignore[assignment]
 
-            cleaned_data: dict[str, Any] | None = validate_and_clean_signal_data(row_dict)
+            cleaned_data: dict[str, Any] | None = validate_and_clean_signal_data(
+                row_dict
+            )
             if cleaned_data:
                 try:
                     create_signal(db=db, signal_data=cleaned_data)  # type: ignore[arg-type]
@@ -283,7 +330,9 @@ async def upload_signals_csv(file: UploadFile = File(default=...)) -> DataUpload
 
 
 @router.post(path="/upload/signals/excel", response_model=DataUploadResponse)
-async def upload_signals_excel(file: UploadFile = File(default=...)) -> DataUploadResponse:
+async def upload_signals_excel(
+    file: UploadFile = File(default=...),
+) -> DataUploadResponse:
     """Upload signals from an Excel file."""
     if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
         raise HTTPException(
@@ -303,7 +352,9 @@ async def upload_signals_excel(file: UploadFile = File(default=...)) -> DataUplo
             processed += 1
             row_dict: dict[Any, Any] = row.to_dict()  # type: ignore[assignment]
 
-            cleaned_data: dict[str, Any] | None = validate_and_clean_signal_data(row_dict)
+            cleaned_data: dict[str, Any] | None = validate_and_clean_signal_data(
+                row_dict
+            )
             if cleaned_data:
                 try:
                     create_signal(db=db, signal_data=cleaned_data)  # type: ignore[arg-type]

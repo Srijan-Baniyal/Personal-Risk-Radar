@@ -7,11 +7,21 @@ from pydantic import BaseModel
 
 from domain.models import Assessment, Risk, RiskCategory, Signal
 from domain.scoring import assess_all_risks, assess_risk
-from persistence.database import (AssessmentModel, RiskModel, SignalModel,
-                                  create_assessment, create_risk, delete_risk,
-                                  get_all_risks, get_all_risks_with_signals,
-                                  get_db, get_risk, get_risk_with_signals,
-                                  get_signals_for_risk, update_risk)
+from persistence.database import (
+    AssessmentModel,
+    RiskModel,
+    SignalModel,
+    create_assessment,
+    create_risk,
+    delete_risk,
+    get_all_risks,
+    get_all_risks_with_signals,
+    get_db,
+    get_risk,
+    get_risk_with_signals,
+    get_signals_for_risk,
+    update_risk,
+)
 
 router = APIRouter(prefix="/api/risks", tags=["risks"])
 
@@ -114,7 +124,9 @@ def get_all_risks_endpoint(
 ) -> list[RiskResponse]:
     """Get all risks with optional filtering."""
     with get_db() as db:
-        db_risks: list[RiskModel] = get_all_risks(db=db, skip=skip, limit=limit, category=category)
+        db_risks: list[RiskModel] = get_all_risks(
+            db=db, skip=skip, limit=limit, category=category
+        )
 
         return [
             RiskResponse(
@@ -138,7 +150,9 @@ def update_risk_endpoint(risk_id: int, risk: RiskUpdate) -> RiskResponse:
     """Update an existing risk."""
     with get_db() as db:
         # Filter out None values
-        update_data: dict[str, Any] = {k: v for k, v in risk.model_dump().items() if v is not None}
+        update_data: dict[str, Any] = {
+            k: v for k, v in risk.model_dump().items() if v is not None
+        }
 
         if not update_data:
             raise HTTPException(
@@ -146,7 +160,9 @@ def update_risk_endpoint(risk_id: int, risk: RiskUpdate) -> RiskResponse:
                 detail="No update data provided",
             )
 
-        db_risk: RiskModel | None = update_risk(db=db, risk_id=risk_id, risk_data=update_data)
+        db_risk: RiskModel | None = update_risk(
+            db=db, risk_id=risk_id, risk_data=update_data
+        )
         if not db_risk:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
@@ -176,6 +192,7 @@ def delete_risk_endpoint(risk_id: int) -> None:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
             )
 
+
 class AssessmentResponse(BaseModel):
     """Response model for assessment."""
 
@@ -192,19 +209,25 @@ class AssessmentResponse(BaseModel):
         from_attributes = True
 
 
-@router.post(path="/{risk_id}/recompute", response_model=AssessmentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    path="/{risk_id}/recompute",
+    response_model=AssessmentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def recompute_risk_endpoint(risk_id: int) -> AssessmentResponse:
     """Recompute risk score based on current signals and create new assessment."""
     with get_db() as db:
         # Get risk with signals
-        result: Optional[tuple[RiskModel, list[SignalModel]]] = get_risk_with_signals(db=db, risk_id=risk_id)
+        result: Optional[tuple[RiskModel, list[SignalModel]]] = get_risk_with_signals(
+            db=db, risk_id=risk_id
+        )
         if not result:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found"
             )
-        
+
         db_risk, db_signals = result
-        
+
         # Convert to domain models
         risk: Risk = Risk(
             id=db_risk.id,
@@ -218,12 +241,12 @@ def recompute_risk_endpoint(risk_id: int) -> AssessmentResponse:
             created_at=db_risk.created_at,
             updated_at=db_risk.updated_at,
         )
-        
+
         signals: list[Signal] = [Signal.from_db_model(db_signal=s) for s in db_signals]
-        
+
         # Compute assessment
         assessment: Assessment = assess_risk(risk=risk, signals=signals)
-        
+
         # Save assessment to database
         db_assessment: AssessmentModel = create_assessment(
             db=db,
@@ -237,7 +260,7 @@ def recompute_risk_endpoint(risk_id: int) -> AssessmentResponse:
                 "assessed_at": assessment.assessed_at,
             },
         )
-        
+
         return AssessmentResponse(
             id=db_assessment.id,
             risk_id=db_assessment.risk_id,
@@ -250,13 +273,19 @@ def recompute_risk_endpoint(risk_id: int) -> AssessmentResponse:
         )
 
 
-@router.post(path="/recompute", response_model=list[AssessmentResponse], status_code=status.HTTP_201_CREATED)
+@router.post(
+    path="/recompute",
+    response_model=list[AssessmentResponse],
+    status_code=status.HTTP_201_CREATED,
+)
 def recompute_all_risks_endpoint() -> list[AssessmentResponse]:
     """Recompute all risk scores based on current signals and create new assessments."""
     with get_db() as db:
         # Get all risks with their signals
-        risks_with_signals_db: list[tuple[RiskModel, list[SignalModel]]] = get_all_risks_with_signals(db=db)
-        
+        risks_with_signals_db: list[tuple[RiskModel, list[SignalModel]]] = (
+            get_all_risks_with_signals(db=db)
+        )
+
         # Convert to domain models
         risks_with_signals: list[tuple[Risk, list[Signal]]] = []
         for db_risk, db_signals in risks_with_signals_db:
@@ -272,12 +301,16 @@ def recompute_all_risks_endpoint() -> list[AssessmentResponse]:
                 created_at=db_risk.created_at,
                 updated_at=db_risk.updated_at,
             )
-            signals: list[Signal] = [Signal.from_db_model(db_signal=s) for s in db_signals]
+            signals: list[Signal] = [
+                Signal.from_db_model(db_signal=s) for s in db_signals
+            ]
             risks_with_signals.append((risk, signals))
-        
+
         # Compute all assessments
-        assessments: list[Assessment] = assess_all_risks(risks_with_signals=risks_with_signals)
-        
+        assessments: list[Assessment] = assess_all_risks(
+            risks_with_signals=risks_with_signals
+        )
+
         # Save all assessments to database
         db_assessments: list[AssessmentModel] = []
         for assessment in assessments:
@@ -294,7 +327,7 @@ def recompute_all_risks_endpoint() -> list[AssessmentResponse]:
                 },
             )
             db_assessments.append(db_assessment)
-        
+
         return [
             AssessmentResponse(
                 id=db_assessment.id,
@@ -308,6 +341,7 @@ def recompute_all_risks_endpoint() -> list[AssessmentResponse]:
             )
             for db_assessment in db_assessments
         ]
+
 
 @router.get(path="/{risk_id}/with-signals", response_model=dict[str, Any])
 def get_risk_with_signals_endpoint(risk_id: int) -> dict[str, Any]:
@@ -397,7 +431,9 @@ def assess_risk_endpoint(risk_id: int) -> dict[str, Any]:
 
         # Save to database
         assessment_data: dict[str, Any] = assessment.model_dump(exclude={"id"})
-        db_assessment: AssessmentModel = create_assessment(db=db, assessment_data=assessment_data)
+        db_assessment: AssessmentModel = create_assessment(
+            db=db, assessment_data=assessment_data
+        )
 
         return {
             "assessment": {

@@ -6,9 +6,17 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from domain.models import SignalDirection, SignalStrength
-from persistence.database import (RiskModel, SignalModel, create_signal, delete_signal, get_db,
-                                  get_risk, get_signal, get_signals_for_risk,
-                                  update_signal)
+from persistence.database import (
+    RiskModel,
+    SignalModel,
+    create_signal,
+    delete_signal,
+    get_db,
+    get_risk,
+    get_signal,
+    get_signals_for_risk,
+    update_signal,
+)
 
 router = APIRouter(prefix="/api/signals", tags=["signals"])
 
@@ -52,7 +60,9 @@ class SignalResponse(BaseModel):
 
 
 # Endpoints
-@router.post(path="/", response_model=SignalResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    path="/", response_model=SignalResponse, status_code=status.HTTP_201_CREATED
+)
 def create_signal_endpoint(signal: SignalCreate) -> SignalResponse:
     """Create a new signal."""
     with get_db() as db:
@@ -73,7 +83,9 @@ def create_signal_endpoint(signal: SignalCreate) -> SignalResponse:
             description=db_signal.description,
             direction=db_signal.direction.value,
             strength=db_signal.strength.value,
-            observed_at=db_signal.observed_at.isoformat() if db_signal.observed_at else None,
+            observed_at=db_signal.observed_at.isoformat()
+            if db_signal.observed_at
+            else None,
             created_at=db_signal.created_at.isoformat(),
         )
 
@@ -95,7 +107,9 @@ def get_signal_endpoint(signal_id: int) -> SignalResponse:
             description=db_signal.description,
             direction=db_signal.direction.value,
             strength=db_signal.strength.value,
-            observed_at=db_signal.observed_at.isoformat() if db_signal.observed_at else None,
+            observed_at=db_signal.observed_at.isoformat()
+            if db_signal.observed_at
+            else None,
             created_at=db_signal.created_at.isoformat(),
         )
 
@@ -121,7 +135,9 @@ def get_signals_for_risk_endpoint(risk_id: int) -> list[SignalResponse]:
                 description=signal.description,
                 direction=signal.direction.value,
                 strength=signal.strength.value,
-                observed_at=signal.observed_at.isoformat() if signal.observed_at else None,
+                observed_at=signal.observed_at.isoformat()
+                if signal.observed_at
+                else None,
                 created_at=signal.created_at.isoformat(),
             )
             for signal in db_signals
@@ -133,7 +149,9 @@ def update_signal_endpoint(signal_id: int, signal: SignalUpdate) -> SignalRespon
     """Update an existing signal."""
     with get_db() as db:
         # Filter out None values
-        update_data: dict[str, Any] = {k: v for k, v in signal.model_dump().items() if v is not None}
+        update_data: dict[str, Any] = {
+            k: v for k, v in signal.model_dump().items() if v is not None
+        }
 
         if not update_data:
             raise HTTPException(
@@ -141,7 +159,9 @@ def update_signal_endpoint(signal_id: int, signal: SignalUpdate) -> SignalRespon
                 detail="No update data provided",
             )
 
-        db_signal: SignalModel | None = update_signal(db=db, signal_id=signal_id, signal_data=update_data)
+        db_signal: SignalModel | None = update_signal(
+            db=db, signal_id=signal_id, signal_data=update_data
+        )
         if not db_signal:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Signal not found"
@@ -154,7 +174,9 @@ def update_signal_endpoint(signal_id: int, signal: SignalUpdate) -> SignalRespon
             description=db_signal.description,
             direction=db_signal.direction.value,
             strength=db_signal.strength.value,
-            observed_at=db_signal.observed_at.isoformat() if db_signal.observed_at else None,
+            observed_at=db_signal.observed_at.isoformat()
+            if db_signal.observed_at
+            else None,
             created_at=db_signal.created_at.isoformat(),
         )
 

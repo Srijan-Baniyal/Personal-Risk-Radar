@@ -13,33 +13,33 @@ if TYPE_CHECKING:
 class RiskCategory(str, Enum):
     """Fixed risk categories."""
 
-    CAREER = "career"
-    FINANCIAL = "financial"
-    HEALTH = "health"
-    TECHNICAL = "technical"
-    PERSONAL = "personal"
+    CAREER = "CAREER"
+    FINANCIAL = "FINANCIAL"
+    HEALTH = "HEALTH"
+    TECHNICAL = "TECHNICAL"
+    PERSONAL = "PERSONAL"
 
 
 class TimeHorizon(str, Enum):
     """Time horizon for risk materialization."""
 
-    WEEKS = "weeks"
-    MONTHS = "months"
+    WEEKS = "WEEKS"
+    MONTHS = "MONTHS"
 
 
 class SignalStrength(str, Enum):
     """Strength of a signal's impact on risk."""
 
-    WEAK = "weak"
-    MEDIUM = "medium"
-    STRONG = "strong"
+    WEAK = "WEAK"
+    MEDIUM = "MEDIUM"
+    STRONG = "STRONG"
 
 
 class SignalDirection(str, Enum):
     """Whether a signal increases or decreases risk."""
 
-    INCREASE = "increase"
-    DECREASE = "decrease"
+    INCREASE = "INCREASE"
+    DECREASE = "DECREASE"
 
 
 class Risk(BaseModel):
@@ -154,7 +154,7 @@ class Assessment(BaseModel):
 class RiskWithSignals(Risk):
     """Risk model with associated signals."""
 
-    signals: list[Signal] = Field(default_factory=list) #type: ignore[list-item]
+    signals: list[Signal] = Field(default_factory=list)  # type: ignore[list-item]
 
 
 class AssessmentWithRisk(Assessment):

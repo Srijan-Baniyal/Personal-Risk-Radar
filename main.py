@@ -4,6 +4,8 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 import pandas as pd
+import plotly.express as px  # type: ignore[import-untyped]
+import plotly.graph_objects as go  # type: ignore[import-untyped]
 import streamlit as st
 
 from domain.models import (Assessment, Risk, RiskCategory, Signal,
@@ -66,7 +68,9 @@ def get_risk_color_class(score: float) -> str:
 def recompute_all_assessments() -> None:
     """Recompute assessments for all risks."""
     with get_db() as db:
-        risks_with_signals: list[tuple[RiskModel, list[SignalModel]]] = get_all_risks_with_signals(db=db)
+        risks_with_signals: list[tuple[RiskModel, list[SignalModel]]] = (
+            get_all_risks_with_signals(db=db)
+        )
 
         for db_risk, db_signals in risks_with_signals:
             # Convert to domain models
@@ -83,7 +87,9 @@ def recompute_all_assessments() -> None:
                 updated_at=db_risk.updated_at,
             )
 
-            signals: list[Signal] = [Signal.from_db_model(db_signal=s) for s in db_signals]
+            signals: list[Signal] = [
+                Signal.from_db_model(db_signal=s) for s in db_signals
+            ]
 
             # Compute assessment
             assessment: Assessment = assess_risk(risk=risk, signals=signals)
@@ -111,7 +117,7 @@ page: str = st.sidebar.radio(
 
 # Sidebar actions
 st.sidebar.markdown(body="---")
-if st.sidebar.button(label="🔄 Recompute All Assessments", use_container_width=True):
+if st.sidebar.button(label="🔄 Recompute All Assessments", width="stretch"):
     with st.spinner(text="Recomputing risk assessments..."):
         recompute_all_assessments()
         st.sidebar.success(body="✅ Assessments updated!")
@@ -120,6 +126,7 @@ if st.sidebar.button(label="🔄 Recompute All Assessments", use_container_width
 # Main Dashboard Page
 if page == "📊 Dashboard":
     st.title(body="📊 Risk Dashboard")
+    st.markdown(body="*Real-time view of your risk exposure across all categories*")
 
     with get_db() as db:
         # Get latest assessments
@@ -134,6 +141,7 @@ if page == "📊 Dashboard":
                 label="Total Risks",
                 value=len(all_risks),
                 delta=None,
+                help="Total number of risks being tracked",
             )
 
         with col2:
@@ -142,6 +150,7 @@ if page == "📊 Dashboard":
                 label="High Risk Items",
                 value=high_risk_count,
                 delta=None,
+                help="Risks with score ≥ 3.0",
             )
 
         with col3:
@@ -154,6 +163,7 @@ if page == "📊 Dashboard":
                 label="Average Risk Score",
                 value=f"{avg_score:.2f}",
                 delta=None,
+                help="Mean score across all risks",
             )
 
         with col4:
@@ -162,7 +172,99 @@ if page == "📊 Dashboard":
                 label="Active Signals",
                 value=total_signals,
                 delta=None,
+                help="Total early warning signals detected",
             )
+
+        st.markdown(body="---")
+
+        if not assessments:
+            st.info(
+                body="👋 Welcome! Get started by creating your first risk in the '⚠️ Manage Risks' page."
+            )
+        else:
+            # Visualizations section
+            st.subheader(body="📈 Risk Overview")
+
+            viz_col1, viz_col2 = st.columns(2)
+
+            with viz_col1:
+                # Risk by category pie chart
+                st.markdown(body="**Risk Distribution by Category**")
+                category_data: dict[str, int] = {}
+                for assessment in assessments:
+                    risk = get_risk(db=db, risk_id=assessment.risk_id)
+                    if risk:
+                        category = risk.category.value.title()
+                        category_data[category] = category_data.get(category, 0) + 1
+
+                if category_data:
+                    fig_pie: go.Figure = px.pie(  # type: ignore[call-arg]
+                        names=list(category_data.keys()),
+                        values=list(category_data.values()),
+                        color_discrete_sequence=px.colors.qualitative.Set3,
+                    )
+                    fig_pie.update_layout(height=300, margin=dict(l=0, r=0, t=30, b=0))  # type: ignore[call-arg]
+                    st.plotly_chart(fig_pie, width="stretch")
+
+            with viz_col2:
+                # Risk severity distribution
+                st.markdown("**Risk Severity Distribution**")
+                severity_counts = {"🟢 Low": 0, "🟡 Medium": 0, "🔴 High": 0}
+                for assessment in assessments:
+                    severity = get_risk_severity(score=assessment.risk_score)
+                    severity_counts[severity] = severity_counts.get(severity, 0) + 1
+
+                fig_bar = px.bar(  # type: ignore[call-arg]
+                    x=list(severity_counts.keys()),
+                    y=list(severity_counts.values()),
+                    color=list(severity_counts.keys()),
+                    color_discrete_map={
+                        "🟢 Low": "#4caf50",
+                        "🟡 Medium": "#ff9800",
+                        "🔴 High": "#f44336",
+                    },
+                    labels={"x": "Severity", "y": "Count"},
+                )
+                fig_bar.update_layout(  # type: ignore[call-arg]
+                    height=300, margin=dict(l=0, r=0, t=30, b=0), showlegend=False
+                )
+                st.plotly_chart(fig_bar, width="stretch")
+
+            # Top risks heatmap
+            st.markdown("**Risk Score Heatmap**")
+            risk_data_viz: list[dict[str, Any]] = []
+            for assessment in assessments:
+                risk = get_risk(db=db, risk_id=assessment.risk_id)
+                if risk:
+                    risk_data_viz.append(
+                        {
+                            "Risk": risk.name[:30] + "..."
+                            if len(risk.name) > 30
+                            else risk.name,
+                            "Category": risk.category.value.title(),
+                            "Score": round(assessment.risk_score, 2),
+                            "Likelihood": assessment.effective_likelihood,
+                            "Impact": assessment.impact,
+                        }
+                    )
+
+            if risk_data_viz:
+                df_viz = (
+                    pd.DataFrame(risk_data_viz)
+                    .sort_values(by="Score", ascending=False)
+                    .head(10)
+                )
+                fig_heatmap = px.bar(  # type: ignore[call-arg]
+                    df_viz,
+                    x="Score",
+                    y="Risk",
+                    orientation="h",
+                    color="Score",
+                    color_continuous_scale=["#4caf50", "#ff9800", "#f44336"],
+                    labels={"Score": "Risk Score"},
+                )
+                fig_heatmap.update_layout(height=400, margin=dict(l=0, r=0, t=30, b=0))  # type: ignore[call-arg]
+                st.plotly_chart(fig_heatmap, width="stretch")
 
         st.markdown(body="---")
 
@@ -170,7 +272,9 @@ if page == "📊 Dashboard":
         st.subheader(body="📋 Current Risks")
 
         if not assessments:
-            st.info(body="No risks found. Create your first risk in the 'Manage Risks' page.")
+            st.info(
+                body="No risks found. Create your first risk in the 'Manage Risks' page."
+            )
         else:
             # Create DataFrame for display
             risk_data: list[dict[str, Any]] = []
@@ -182,7 +286,9 @@ if page == "📊 Dashboard":
                             "ID": risk.id,
                             "Name": risk.name,
                             "Category": risk.category.value.title(),
-                            "Risk Score": round(number=assessment.risk_score, ndigits=2),
+                            "Risk Score": round(
+                                number=assessment.risk_score, ndigits=2
+                            ),
                             "Severity": get_risk_severity(score=assessment.risk_score),
                             "Effective Likelihood": f"{assessment.effective_likelihood:.0%}",
                             "Impact": f"{assessment.impact}/5",
@@ -198,7 +304,7 @@ if page == "📊 Dashboard":
             # Display as interactive table
             st.dataframe(  # type: ignore[misc]
                 data=df,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 column_config={
                     "Risk Score": st.column_config.ProgressColumn(
@@ -240,11 +346,17 @@ if page == "📊 Dashboard":
                             st.write(get_risk_severity(score=assessment.risk_score))
 
                         # Show signals
-                        signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk.id)
+                        signals: list[SignalModel] = get_signals_for_risk(
+                            db=db, risk_id=risk.id
+                        )
                         if signals:
                             st.write(f"**Active Signals ({len(signals)}):**")
                             for signal in signals:
-                                emoji: str = "📈" if signal.direction == SignalDirection.INCREASE else "📉"
+                                emoji: str = (
+                                    "📈"
+                                    if signal.direction == SignalDirection.INCREASE
+                                    else "📉"
+                                )
                                 st.write(
                                     f"{emoji} {signal.name} ({signal.strength.value})"
                                 )
@@ -255,21 +367,30 @@ if page == "📊 Dashboard":
 # Manage Risks Page
 elif page == "⚠️ Manage Risks":
     st.title(body="⚠️ Manage Risks")
+    st.markdown(body="*Define and track future uncertainties with potential impact*")
 
     tab1, tab2, tab3 = st.tabs(["➕ Create Risk", "📝 Edit Risk", "🗑️ Delete Risk"])
 
     with tab1:
         st.subheader(body="Create New Risk")
+        st.info(
+            "💡 **Tip:** Start with risks that feel important but lack clear mitigation. Good examples: career stagnation, budget overruns, technical debt."
+        )
 
         with st.form(key="create_risk_form"):
             col1, col2 = st.columns(spec=2)
 
             with col1:
-                name: str = st.text_input(label="Risk Name*", placeholder="e.g., Job market downturn")
+                name: str = st.text_input(
+                    label="Risk Name*",
+                    placeholder="e.g., Job market downturn",
+                    help="A clear, concise name for this risk",
+                )
                 category: str = st.selectbox(
                     label="Category*",
                     options=[c.value for c in RiskCategory],
                     format_func=lambda x: x.title(),
+                    help="The domain this risk affects",
                 )
                 base_likelihood: float = st.slider(
                     label="Base Likelihood*",
@@ -277,7 +398,7 @@ elif page == "⚠️ Manage Risks":
                     max_value=1.0,
                     value=0.5,
                     step=0.05,
-                    help="Probability before considering signals",
+                    help="Probability before considering signals (0 = impossible, 1 = certain)",
                 )
 
             with col2:
@@ -286,7 +407,7 @@ elif page == "⚠️ Manage Risks":
                     min_value=1,
                     max_value=5,
                     value=3,
-                    help="Severity if it happens (1=minor, 5=critical)",
+                    help="Severity if it happens (1 = minor inconvenience, 5 = catastrophic)",
                 )
                 confidence: float = st.slider(
                     label="Confidence*",
@@ -294,17 +415,19 @@ elif page == "⚠️ Manage Risks":
                     max_value=1.0,
                     value=0.7,
                     step=0.05,
-                    help="How confident are you in this assessment?",
+                    help="How confident are you in this assessment? (0 = pure guess, 1 = absolute certainty)",
                 )
                 time_horizon: str = st.selectbox(
                     label="Time Horizon*",
                     options=[h.value for h in TimeHorizon],
                     format_func=lambda x: x.title(),
+                    help="When might this risk materialize?",
                 )
 
             description: str = st.text_area(
                 label="Description (optional)",
-                placeholder="Detailed description of the risk...",
+                placeholder="Add context, examples, or conditions that would trigger this risk...",
+                help="Detailed explanation to help you remember what this risk means",
             )
 
             # Show calculated score preview
@@ -313,15 +436,20 @@ elif page == "⚠️ Manage Risks":
                 impact=impact,
                 confidence=confidence,
             )
+            severity_preview = get_risk_severity(preview_score)
             st.info(
-                body=f"📊 Base Risk Score Preview: **{preview_score:.2f}** / 5.00 - {get_risk_severity(preview_score)}"
+                body=f"📊 **Base Risk Score Preview:** {preview_score:.2f} / 5.00 ({severity_preview})"
             )
 
-            submitted: bool = st.form_submit_button("Create Risk", use_container_width=True)
+            submitted: bool = st.form_submit_button(
+                "✅ Create Risk", width="stretch", type="primary"
+            )
 
             if submitted:
-                if not name:
-                    st.error(body="Risk name is required!")
+                if not name or len(name.strip()) == 0:
+                    st.error(body="❌ Risk name is required and cannot be empty!")
+                elif len(name) > 200:
+                    st.error(body="❌ Risk name must be 200 characters or less!")
                 else:
                     with get_db() as db:
                         create_risk_data: dict[str, Any] = {
@@ -334,7 +462,9 @@ elif page == "⚠️ Manage Risks":
                             "time_horizon": TimeHorizon(value=time_horizon),
                         }
 
-                        new_risk: RiskModel = create_risk(db=db, risk_data=create_risk_data)
+                        new_risk: RiskModel = create_risk(
+                            db=db, risk_data=create_risk_data
+                        )
 
                         # Create initial assessment
                         risk_obj: Risk = Risk(
@@ -368,8 +498,12 @@ elif page == "⚠️ Manage Risks":
             if not risks:
                 st.info(body="No risks available to edit.")
             else:
-                risk_options: dict[str, int] = {f"{r.id} - {r.name}": r.id for r in risks}
-                selected: str = st.selectbox(label="Select Risk to Edit", options=risk_options.keys())
+                risk_options: dict[str, int] = {
+                    f"{r.id} - {r.name}": r.id for r in risks
+                }
+                selected: str = st.selectbox(
+                    label="Select Risk to Edit", options=risk_options.keys()
+                )
 
                 if selected:
                     risk_id: int = risk_options[selected]
@@ -380,7 +514,9 @@ elif page == "⚠️ Manage Risks":
                             col1, col2 = st.columns(spec=2)
 
                             with col1:
-                                new_name: str = st.text_input(label="Risk Name", value=risk.name)
+                                new_name: str = st.text_input(
+                                    label="Risk Name", value=risk.name
+                                )
                                 new_category: str = st.selectbox(
                                     label="Category",
                                     options=[c.value for c in RiskCategory],
@@ -425,7 +561,9 @@ elif page == "⚠️ Manage Risks":
                                 value=risk.description or "",
                             )
 
-                            submitted: bool = st.form_submit_button(label="Update Risk", use_container_width=True)
+                            submitted: bool = st.form_submit_button(
+                                label="Update Risk", width="stretch"
+                            )
 
                             if submitted:
                                 update_data: dict[str, Any] = {
@@ -438,18 +576,26 @@ elif page == "⚠️ Manage Risks":
                                     "description": new_desc if new_desc else None,
                                 }
 
-                                update_risk(db=db, risk_id=risk_id, risk_data=update_data)
+                                update_risk(
+                                    db=db, risk_id=risk_id, risk_data=update_data
+                                )
 
                                 # Recompute assessment
-                                signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk_id)
+                                signals: list[SignalModel] = get_signals_for_risk(
+                                    db=db, risk_id=risk_id
+                                )
                                 risk_obj: Risk = Risk(
                                     id=risk_id,
                                     **update_data,
                                     created_at=risk.created_at,
                                     updated_at=datetime.now(tz=timezone.utc),
                                 )
-                                signal_objs: list[Signal] = [Signal.from_db_model(db_signal=s) for s in signals]
-                                assessment: Assessment = assess_risk(risk=risk_obj, signals=signal_objs)
+                                signal_objs: list[Signal] = [
+                                    Signal.from_db_model(db_signal=s) for s in signals
+                                ]
+                                assessment: Assessment = assess_risk(
+                                    risk=risk_obj, signals=signal_objs
+                                )
                                 create_assessment(
                                     db=db,
                                     assessment_data={
@@ -474,7 +620,9 @@ elif page == "⚠️ Manage Risks":
             if not risks:
                 st.info(body="No risks available to delete.")
             else:
-                risk_options: dict[str, int] = {f"{r.id} - {r.name}": r.id for r in risks}
+                risk_options: dict[str, int] = {
+                    f"{r.id} - {r.name}": r.id for r in risks
+                }
                 selected: str = st.selectbox(
                     label="Select Risk to Delete",
                     options=risk_options.keys(),
@@ -493,14 +641,19 @@ elif page == "⚠️ Manage Risks":
 
                         if st.button(label="🗑️ Confirm Delete", type="primary"):
                             delete_risk(db=db, risk_id=risk_id)
-                            st.success(body=f"✅ Risk '{risk.name}' deleted successfully!")
+                            st.success(
+                                body=f"✅ Risk '{risk.name}' deleted successfully!"
+                            )
                             st.rerun()
 
 # Manage Signals Page
 elif page == "📡 Manage Signals":
     st.title(body="📡 Manage Signals")
+    st.markdown(body="*Track early warning indicators that increase or decrease risk*")
 
-    tab1, tab2, tab3 = st.tabs(["➕ Create Signal", "📝 Edit Signal", "🗑️ Delete Signal"])
+    tab1, tab2, tab3 = st.tabs(
+        ["➕ Create Signal", "📝 Edit Signal", "🗑️ Delete Signal"]
+    )
 
     with tab1:
         st.subheader(body="Create New Signal")
@@ -509,28 +662,44 @@ elif page == "📡 Manage Signals":
             risks: list[RiskModel] = get_all_risks(db=db)
 
             if not risks:
-                st.warning(body="No risks available. Please create a risk first.")
+                st.warning(
+                    body="⚠️ No risks available. Please create a risk first before adding signals."
+                )
+                st.info(
+                    body="💡 Signals are early warning indicators linked to specific risks. Create a risk in the '⚠️ Manage Risks' page to get started."
+                )
             else:
+                st.info(
+                    "💡 **What are signals?** Observable indicators that suggest a risk is increasing or decreasing. Examples: 'Failed CI/CD tests', 'Overtime hours increasing', 'Regular exercise routine'."
+                )
+
                 with st.form(key="create_signal_form"):
                     col1, col2 = st.columns(spec=2)
 
                     with col1:
-                        risk_options: dict[str, int] = {f"{r.id} - {r.name}": r.id for r in risks}
+                        risk_options: dict[str, int] = {
+                            f"{r.id} - {r.name}": r.id for r in risks
+                        }
                         selected_risk: str = st.selectbox(
                             label="Associated Risk*",
                             options=risk_options.keys(),
+                            help="Which risk does this signal affect?",
                         )
                         risk_id: int = risk_options[selected_risk]
 
                         signal_name: str = st.text_input(
                             label="Signal Name*",
                             placeholder="e.g., LinkedIn recruiter messages decreased",
+                            help="A clear, observable indicator",
                         )
 
                         direction: str = st.selectbox(
                             label="Direction*",
                             options=[d.value for d in SignalDirection],
-                            format_func=lambda x: f"📈 {x.title()}" if x == "increase" else f"📉 {x.title()}",
+                            format_func=lambda x: f"📈 {x.title()}"
+                            if x == "increase"
+                            else f"📉 {x.title()}",
+                            help="Does this signal increase or decrease the risk?",
                         )
 
                     with col2:
@@ -538,16 +707,19 @@ elif page == "📡 Manage Signals":
                             label="Strength*",
                             options=[s.value for s in SignalStrength],
                             format_func=lambda x: x.title(),
+                            help="How strongly does this signal affect the risk? Weak: ±5%, Medium: ±10%, Strong: ±20%",
                         )
 
                         observed_at: date = st.date_input(
                             label="Observed Date",
                             value=datetime.now(tz=timezone.utc).date(),
+                            help="When did you first notice this signal?",
                         )
 
                     signal_desc: str = st.text_area(
                         label="Description (optional)",
-                        placeholder="Details about this signal...",
+                        placeholder="Add context about when and how you observed this signal...",
+                        help="Additional details to help you remember this signal",
                     )
 
                     # Show impact preview
@@ -563,14 +735,24 @@ elif page == "📡 Manage Signals":
                         modifier = -modifier
 
                     st.info(
-                        body=f"📊 This signal will modify likelihood by: **{modifier:+.0%}**"
+                        body=f"📊 **Impact Preview:** This signal will modify likelihood by **{modifier:+.0%}**"
                     )
 
-                    submitted: bool = st.form_submit_button(label="Create Signal", use_container_width=True)
+                    submitted: bool = st.form_submit_button(
+                        label="✅ Create Signal",
+                        width="stretch",
+                        type="primary",
+                    )
 
                     if submitted:
-                        if not signal_name:
-                            st.error(body="Signal name is required!")
+                        if not signal_name or len(signal_name.strip()) == 0:
+                            st.error(
+                                body="❌ Signal name is required and cannot be empty!"
+                            )
+                        elif len(signal_name) > 200:
+                            st.error(
+                                body="❌ Signal name must be 200 characters or less!"
+                            )
                         else:
                             signal_data: dict[str, Any] = {
                                 "risk_id": risk_id,
@@ -590,7 +772,9 @@ elif page == "📡 Manage Signals":
                             # Recompute assessment for the risk
                             risk: RiskModel | None = get_risk(db=db, risk_id=risk_id)
                             if risk:
-                                signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk_id)
+                                signals: list[SignalModel] = get_signals_for_risk(
+                                    db=db, risk_id=risk_id
+                                )
                                 risk_obj: Risk = Risk(
                                     id=risk.id,
                                     category=risk.category,
@@ -603,8 +787,12 @@ elif page == "📡 Manage Signals":
                                     created_at=risk.created_at,
                                     updated_at=risk.updated_at,
                                 )
-                                signal_objs: list[Signal] = [Signal.from_db_model(db_signal=s) for s in signals]
-                                assessment: Assessment = assess_risk(risk=risk_obj, signals=signal_objs)
+                                signal_objs: list[Signal] = [
+                                    Signal.from_db_model(db_signal=s) for s in signals
+                                ]
+                                assessment: Assessment = assess_risk(
+                                    risk=risk_obj, signals=signal_objs
+                                )
                                 create_assessment(
                                     db=db,
                                     assessment_data={
@@ -617,7 +805,9 @@ elif page == "📡 Manage Signals":
                                     },
                                 )
 
-                            st.success(body=f"✅ Signal '{signal_name}' created successfully!")
+                            st.success(
+                                body=f"✅ Signal '{signal_name}' created successfully!"
+                            )
                             st.rerun()
 
     with tab2:
@@ -627,7 +817,9 @@ elif page == "📡 Manage Signals":
             risks: list[RiskModel] = get_all_risks(db=db)
             all_signals: list[tuple[SignalModel, str]] = []
             for risk in risks:
-                signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk.id)
+                signals: list[SignalModel] = get_signals_for_risk(
+                    db=db, risk_id=risk.id
+                )
                 all_signals.extend([(s, risk.name) for s in signals])
 
             if not all_signals:
@@ -637,25 +829,33 @@ elif page == "📡 Manage Signals":
                     f"{s.id} - {s.name} (Risk: {risk_name})": s.id
                     for s, risk_name in all_signals
                 }
-                selected: str = st.selectbox(label="Select Signal to Edit", options=signal_options.keys())
+                selected: str = st.selectbox(
+                    label="Select Signal to Edit", options=signal_options.keys()
+                )
 
                 if selected:
                     signal_id: int = signal_options[selected]
-                    signal: SignalModel | None = next((s for s, _ in all_signals if s.id == signal_id), None)
+                    signal: SignalModel | None = next(
+                        (s for s, _ in all_signals if s.id == signal_id), None
+                    )
 
                     if signal:
                         with st.form(key="edit_signal_form"):
                             col1, col2 = st.columns(spec=2)
 
                             with col1:
-                                new_name: str = st.text_input(label="Signal Name", value=signal.name)
+                                new_name: str = st.text_input(
+                                    label="Signal Name", value=signal.name
+                                )
                                 new_direction: str = st.selectbox(
                                     label="Direction",
                                     options=[d.value for d in SignalDirection],
                                     index=[d.value for d in SignalDirection].index(
                                         signal.direction.value
                                     ),
-                                    format_func=lambda x: f"📈 {x.title()}" if x == "increase" else f"📉 {x.title()}",
+                                    format_func=lambda x: f"📈 {x.title()}"
+                                    if x == "increase"
+                                    else f"📉 {x.title()}",
                                 )
 
                             with col2:
@@ -673,7 +873,9 @@ elif page == "📡 Manage Signals":
                                 value=signal.description or "",
                             )
 
-                            submitted: bool = st.form_submit_button(label="Update Signal", use_container_width=True)
+                            submitted: bool = st.form_submit_button(
+                                label="Update Signal", width="stretch"
+                            )
 
                             if submitted:
                                 update_data: dict[str, Any] = {
@@ -683,12 +885,18 @@ elif page == "📡 Manage Signals":
                                     "description": new_desc if new_desc else None,
                                 }
 
-                                update_signal(db=db, signal_id=signal_id, signal_data=update_data)
+                                update_signal(
+                                    db=db, signal_id=signal_id, signal_data=update_data
+                                )
 
                                 # Recompute assessment
-                                risk: RiskModel | None = get_risk(db=db, risk_id=signal.risk_id)
+                                risk: RiskModel | None = get_risk(
+                                    db=db, risk_id=signal.risk_id
+                                )
                                 if risk:
-                                    signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=signal.risk_id)
+                                    signals: list[SignalModel] = get_signals_for_risk(
+                                        db=db, risk_id=signal.risk_id
+                                    )
                                     risk_obj: Risk = Risk(
                                         id=risk.id,
                                         category=risk.category,
@@ -701,8 +909,13 @@ elif page == "📡 Manage Signals":
                                         created_at=risk.created_at,
                                         updated_at=risk.updated_at,
                                     )
-                                    signal_objs: list[Signal] = [Signal.from_db_model(db_signal=s) for s in signals]
-                                    assessment: Assessment = assess_risk(risk=risk_obj, signals=signal_objs)
+                                    signal_objs: list[Signal] = [
+                                        Signal.from_db_model(db_signal=s)
+                                        for s in signals
+                                    ]
+                                    assessment: Assessment = assess_risk(
+                                        risk=risk_obj, signals=signal_objs
+                                    )
                                     create_assessment(
                                         db=db,
                                         assessment_data={
@@ -725,7 +938,9 @@ elif page == "📡 Manage Signals":
             risks: list[RiskModel] = get_all_risks(db=db)
             all_signals: list[tuple[SignalModel, str]] = []
             for risk in risks:
-                signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk.id)
+                signals: list[SignalModel] = get_signals_for_risk(
+                    db=db, risk_id=risk.id
+                )
                 all_signals.extend([(s, risk.name) for s in signals])
 
             if not all_signals:
@@ -743,7 +958,9 @@ elif page == "📡 Manage Signals":
 
                 if selected:
                     signal_id: int = signal_options[selected]
-                    signal: SignalModel | None = next((s for s, _ in all_signals if s.id == signal_id), None)
+                    signal: SignalModel | None = next(
+                        (s for s, _ in all_signals if s.id == signal_id), None
+                    )
 
                     if signal:
                         st.warning(body=f"⚠️ You are about to delete: **{signal.name}**")
@@ -755,7 +972,9 @@ elif page == "📡 Manage Signals":
                             # Recompute assessment for the affected risk
                             risk: RiskModel | None = get_risk(db=db, risk_id=risk_id)
                             if risk:
-                                signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk_id)
+                                signals: list[SignalModel] = get_signals_for_risk(
+                                    db=db, risk_id=risk_id
+                                )
                                 risk_obj: Risk = Risk(
                                     id=risk.id,
                                     category=risk.category,
@@ -768,8 +987,12 @@ elif page == "📡 Manage Signals":
                                     created_at=risk.created_at,
                                     updated_at=risk.updated_at,
                                 )
-                                signal_objs: list[Signal] = [Signal.from_db_model(db_signal=s) for s in signals]
-                                assessment: Assessment = assess_risk(risk=risk_obj, signals=signal_objs)
+                                signal_objs: list[Signal] = [
+                                    Signal.from_db_model(db_signal=s) for s in signals
+                                ]
+                                assessment: Assessment = assess_risk(
+                                    risk=risk_obj, signals=signal_objs
+                                )
                                 create_assessment(
                                     db=db,
                                     assessment_data={
@@ -782,32 +1005,43 @@ elif page == "📡 Manage Signals":
                                     },
                                 )
 
-                            st.success(body=f"✅ Signal '{signal.name}' deleted successfully!")
+                            st.success(
+                                body=f"✅ Signal '{signal.name}' deleted successfully!"
+                            )
                             st.rerun()
 
 # Trends Page
 elif page == "📈 Trends":
     st.title(body="📈 Risk Trends")
+    st.markdown(body="*Track how your risk exposure changes over time*")
 
     with get_db() as db:
         risks = get_all_risks(db=db)
 
         if not risks:
-            st.info(body="No risks available for trend analysis.")
+            st.info(
+                body="No risks available for trend analysis. Create your first risk to begin tracking trends."
+            )
         else:
             # Select risk for trend analysis
             risk_options: dict[str, int] = {f"{r.id} - {r.name}": r.id for r in risks}
-            selected = st.selectbox(label="Select Risk to Analyze", options=risk_options.keys())
+            selected = st.selectbox(
+                label="Select Risk to Analyze",
+                options=risk_options.keys(),
+                help="Choose a risk to view its historical assessment data",
+            )
 
             if selected:
                 risk_id: int = risk_options[selected]
                 risk = get_risk(db=db, risk_id=risk_id)
-                assessments: list[AssessmentModel] = get_assessments_for_risk(db=db, risk_id=risk_id, limit=50)
+                assessments: list[AssessmentModel] = get_assessments_for_risk(
+                    db=db, risk_id=risk_id, limit=50
+                )
 
                 if risk:
                     st.subheader(body=f"Trend Analysis: {risk.name}")
 
-                    col1, col2 = st.columns(spec=[2, 1])
+                    col1, col2, col3 = st.columns(spec=[2, 1, 1])
 
                     with col1:
                         st.write(f"**Category:** {risk.category.value.title()}")
@@ -815,53 +1049,139 @@ elif page == "📈 Trends":
                             st.write(f"**Description:** {risk.description}")
 
                     with col2:
-                        current_signals: list[SignalModel] = get_signals_for_risk(db=db, risk_id=risk_id)
+                        current_signals: list[SignalModel] = get_signals_for_risk(
+                            db=db, risk_id=risk_id
+                        )
                         st.metric(label="Active Signals", value=len(current_signals))
 
+                    with col3:
+                        if assessments:
+                            st.metric(label="Assessments", value=len(assessments))
+
                     if not assessments:
-                        st.info(body="No historical assessments available for this risk.")
+                        st.info(
+                            body="No historical assessments available for this risk. The trend will appear after you recompute assessments."
+                        )
                     else:
                         # Prepare trend data
                         trend_data: list[dict[str, Any]] = []
                         for assessment in reversed(assessments):  # Oldest first
                             trend_data.append(
                                 {
-                                    "Date": assessment.assessed_at.strftime(format="%Y-%m-%d %H:%M"),
-                                    "Risk Score": round(number=assessment.risk_score, ndigits=2),
+                                    "Date": assessment.assessed_at,
+                                    "Risk Score": round(
+                                        number=assessment.risk_score, ndigits=2
+                                    ),
                                     "Effective Likelihood": round(
-                                        number=assessment.effective_likelihood, ndigits=2
+                                        number=assessment.effective_likelihood,
+                                        ndigits=2,
                                     ),
                                     "Impact": assessment.impact,
-                                    "Confidence": round(number=assessment.confidence, ndigits=2),
+                                    "Confidence": round(
+                                        number=assessment.confidence, ndigits=2
+                                    ),
                                     "Signal Count": assessment.signal_count,
                                 }
                             )
 
                         df = pd.DataFrame(data=trend_data)
 
-                        # Risk Score Trend
-                        st.markdown(body="### Risk Score Over Time")
-                        st.line_chart(data=df.set_index(keys="Date")["Risk Score"])  # type: ignore[misc]
+                        # Combined interactive chart
+                        st.markdown(body="### 📊 Risk Score Timeline")
+                        fig_main = go.Figure()
 
-                        # Effective Likelihood Trend
-                        st.markdown(body="### Effective Likelihood Over Time")
-                        st.line_chart(data=df.set_index(keys="Date")["Effective Likelihood"])  # type: ignore[misc]
-
-                        # Signal Count Trend
-                        st.markdown(body="### Signal Count Over Time")
-                        st.bar_chart(data=df.set_index(keys="Date")["Signal Count"])  # type: ignore[misc]
-
-                        # Detailed history table
-                        st.markdown(body="### Assessment History")
-                        st.dataframe(  # type: ignore[misc]
-                            data=df,
-                            use_container_width=True,
-                            hide_index=True,
+                        fig_main.add_trace(  # type: ignore[call-arg]
+                            go.Scatter(
+                                x=df["Date"],
+                                y=df["Risk Score"],
+                                mode="lines+markers",
+                                name="Risk Score",
+                                line=dict(color="#f44336", width=3),
+                                marker=dict(size=8),
+                            )
                         )
 
+                        # Add threshold lines
+                        fig_main.add_hline(  # type: ignore[call-arg]
+                            y=3.0,
+                            line_dash="dash",
+                            line_color="red",
+                            annotation_text="High Risk Threshold",
+                        )
+                        fig_main.add_hline(  # type: ignore[call-arg]
+                            y=1.5,
+                            line_dash="dash",
+                            line_color="orange",
+                            annotation_text="Medium Risk Threshold",
+                        )
+
+                        fig_main.update_layout(  # type: ignore[call-arg]
+                            height=400,
+                            hovermode="x unified",
+                            xaxis_title="Date",
+                            yaxis_title="Risk Score",
+                            yaxis=dict(range=[0, 5.5]),
+                        )
+                        st.plotly_chart(fig_main, width="stretch")
+
+                        # Multi-metric comparison
+                        st.markdown(body="### 📈 Component Analysis")
+
+                        fig_multi = go.Figure()
+
+                        fig_multi.add_trace(  # type: ignore[call-arg]
+                            go.Scatter(
+                                x=df["Date"],
+                                y=df["Effective Likelihood"],
+                                mode="lines",
+                                name="Likelihood",
+                                line=dict(color="#2196f3", width=2),
+                            )
+                        )
+
+                        fig_multi.add_trace(  # type: ignore[call-arg]
+                            go.Scatter(
+                                x=df["Date"],
+                                y=df["Impact"] / 5,  # Normalize to 0-1 scale
+                                mode="lines",
+                                name="Impact (normalized)",
+                                line=dict(color="#ff9800", width=2),
+                            )
+                        )
+
+                        fig_multi.add_trace(  # type: ignore[call-arg]
+                            go.Scatter(
+                                x=df["Date"],
+                                y=df["Confidence"],
+                                mode="lines",
+                                name="Confidence",
+                                line=dict(color="#4caf50", width=2),
+                            )
+                        )
+
+                        fig_multi.update_layout(  # type: ignore[call-arg]
+                            height=350,
+                            hovermode="x unified",
+                            xaxis_title="Date",
+                            yaxis_title="Value (0-1)",
+                            yaxis=dict(range=[0, 1.1]),
+                        )
+                        st.plotly_chart(fig_multi, width="stretch")
+
+                        # Signal Count Trend
+                        st.markdown(body="### 📡 Signal Activity")
+                        fig_signals = px.area(  # type: ignore[call-arg]
+                            df,
+                            x="Date",
+                            y="Signal Count",
+                            color_discrete_sequence=["#9c27b0"],
+                        )
+                        fig_signals.update_layout(height=250)  # type: ignore[call-arg]
+                        st.plotly_chart(fig_signals, width="stretch")
+
                         # Statistics
-                        st.markdown(body="### Statistics")
-                        col1, col2, col3, col4 = st.columns(4)
+                        st.markdown(body="### 📊 Statistics Summary")
+                        col1, col2, col3, col4, col5 = st.columns(5)
 
                         with col1:
                             st.metric(
@@ -877,12 +1197,36 @@ elif page == "📈 Trends":
 
                         with col3:
                             st.metric(
-                                label="Max Score",
+                                label="Peak Score",
                                 value=f"{df['Risk Score'].max():.2f}",
                             )
 
                         with col4:
                             st.metric(
-                                label="Min Score",
+                                label="Lowest Score",
                                 value=f"{df['Risk Score'].min():.2f}",
+                            )
+
+                        with col5:
+                            # Calculate trend (simple: compare first and last)
+                            if len(df) > 1:
+                                trend_delta = (
+                                    df["Risk Score"].iloc[-1] - df["Risk Score"].iloc[0]
+                                )
+                                st.metric(
+                                    label="Trend",
+                                    value=f"{trend_delta:+.2f}",
+                                    delta=f"{trend_delta:+.2f}",
+                                )
+
+                        # Detailed history table (expandable)
+                        with st.expander("📋 View Full Assessment History"):
+                            display_df = df.copy()
+                            display_df["Date"] = pd.to_datetime(
+                                display_df["Date"]
+                            ).dt.strftime("%Y-%m-%d %H:%M")
+                            st.dataframe(  # type: ignore[misc]
+                                data=display_df,
+                                width="stretch",
+                                hide_index=True,
                             )
