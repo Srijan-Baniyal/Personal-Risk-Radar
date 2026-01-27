@@ -1,0 +1,43 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Python
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Caching
+.ruff_cache
+.pytest_cache
+
+# Database temp files
+*.db-journal
+*.db-wal
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Tests (optional - include if you want to run tests in container)
+tests/

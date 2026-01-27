@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  risk-radar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: personal-risk-radar
+    ports:
+      - "8000:8000"   # FastAPI
+      - "8501:8501"   # Streamlit Dashboard
+    volumes:
+      # Persist database outside container
+      - ./personal_risk_radar.db:/app/personal_risk_radar.db
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - risk-radar-network
+
+networks:
+  risk-radar-network:
+    driver: bridge
