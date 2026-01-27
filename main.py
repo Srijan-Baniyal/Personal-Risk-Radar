@@ -31,14 +31,375 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS for better styling
+# Enhanced Custom CSS for better styling and accessibility with theme support
 st.markdown(
     body="""
     <style>
-    .risk-high { background-color: #ffebee; padding: 10px; border-radius: 5px; border-left: 4px solid #f44336; }
-    .risk-medium { background-color: #fff3e0; padding: 10px; border-radius: 5px; border-left: 4px solid #ff9800; }
-    .risk-low { background-color: #e8f5e9; padding: 10px; border-radius: 5px; border-left: 4px solid #4caf50; }
-    .metric-card { padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    /* ═══════════════════════════════════════════════════════════════════════
+       CSS VARIABLES FOR THEME SUPPORT
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    /* Light Theme (Default) */
+    :root {
+        /* Primary Colors */
+        --color-primary: #667eea;
+        --color-primary-light: #8b9df0;
+        --color-secondary: #764ba2;
+        
+        /* Risk Colors */
+        --color-risk-high: #f44336;
+        --color-risk-high-bg: rgba(244, 67, 54, 0.1);
+        --color-risk-medium: #ff9800;
+        --color-risk-medium-bg: rgba(255, 152, 0, 0.1);
+        --color-risk-low: #4caf50;
+        --color-risk-low-bg: rgba(76, 175, 80, 0.1);
+        
+        /* Text Colors */
+        --color-text-primary: #1a1a2e;
+        --color-text-secondary: #4a4a6a;
+        --color-text-muted: #666666;
+        
+        /* Background Colors */
+        --color-bg-primary: #ffffff;
+        --color-bg-secondary: #f8f9fa;
+        --color-bg-card: rgba(102, 126, 234, 0.05);
+        --color-bg-sidebar-start: #f0f2f6;
+        --color-bg-sidebar-end: #e8eaf0;
+        
+        /* Box Colors */
+        --color-info-bg: rgba(33, 150, 243, 0.1);
+        --color-info-border: #2196f3;
+        --color-info-heading: #1565c0;
+        --color-info-text: #1a1a2e;
+        
+        --color-success-bg: rgba(76, 175, 80, 0.1);
+        --color-success-border: #4caf50;
+        --color-success-heading: #2e7d32;
+        --color-success-text: #1a1a2e;
+        
+        --color-warning-bg: rgba(255, 152, 0, 0.1);
+        --color-warning-border: #ff9800;
+        --color-warning-heading: #e65100;
+        --color-warning-text: #1a1a2e;
+        
+        /* Card Colors */
+        --color-feature-bg: rgba(102, 126, 234, 0.08);
+        --color-feature-border: rgba(102, 126, 234, 0.2);
+        --color-feature-heading: #5c6bc0;
+        --color-feature-text: #4a4a6a;
+        
+        --color-concept-bg: rgba(102, 126, 234, 0.08);
+        --color-concept-text: #4a4a6a;
+        
+        /* Footer */
+        --color-footer-text: #888888;
+        --color-footer-border: rgba(0, 0, 0, 0.1);
+        
+        /* Shadows */
+        --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.1);
+        --shadow-card-hover: 0 8px 24px rgba(102, 126, 234, 0.15);
+        --shadow-risk-high: 0 2px 8px rgba(244, 67, 54, 0.15);
+        --shadow-risk-medium: 0 2px 8px rgba(255, 152, 0, 0.15);
+        --shadow-risk-low: 0 2px 8px rgba(76, 175, 80, 0.15);
+    }
+    
+    /* Dark Theme */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            /* Primary Colors */
+            --color-primary: #667eea;
+            --color-primary-light: #9fa8da;
+            --color-secondary: #764ba2;
+            
+            /* Risk Colors */
+            --color-risk-high: #f44336;
+            --color-risk-high-bg: rgba(244, 67, 54, 0.15);
+            --color-risk-medium: #ff9800;
+            --color-risk-medium-bg: rgba(255, 152, 0, 0.15);
+            --color-risk-low: #4caf50;
+            --color-risk-low-bg: rgba(76, 175, 80, 0.15);
+            
+            /* Text Colors */
+            --color-text-primary: #fafafa;
+            --color-text-secondary: #e0e0e0;
+            --color-text-muted: #888888;
+            
+            /* Background Colors */
+            --color-bg-primary: #1a1a2e;
+            --color-bg-secondary: #16213e;
+            --color-bg-card: rgba(255, 255, 255, 0.05);
+            --color-bg-sidebar-start: #1a1a2e;
+            --color-bg-sidebar-end: #16213e;
+            
+            /* Box Colors */
+            --color-info-bg: rgba(33, 150, 243, 0.15);
+            --color-info-border: #2196f3;
+            --color-info-heading: #64b5f6;
+            --color-info-text: #e0e0e0;
+            
+            --color-success-bg: rgba(76, 175, 80, 0.15);
+            --color-success-border: #4caf50;
+            --color-success-heading: #81c784;
+            --color-success-text: #e0e0e0;
+            
+            --color-warning-bg: rgba(255, 152, 0, 0.15);
+            --color-warning-border: #ff9800;
+            --color-warning-heading: #ffb74d;
+            --color-warning-text: #e0e0e0;
+            
+            /* Card Colors */
+            --color-feature-bg: rgba(102, 126, 234, 0.1);
+            --color-feature-border: rgba(102, 126, 234, 0.3);
+            --color-feature-heading: #9fa8da;
+            --color-feature-text: #e0e0e0;
+            
+            --color-concept-bg: rgba(102, 126, 234, 0.1);
+            --color-concept-text: #e0e0e0;
+            
+            /* Footer */
+            --color-footer-text: #888888;
+            --color-footer-border: rgba(255, 255, 255, 0.1);
+            
+            /* Shadows */
+            --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-card-hover: 0 8px 24px rgba(102, 126, 234, 0.2);
+            --shadow-risk-high: 0 2px 8px rgba(244, 67, 54, 0.2);
+            --shadow-risk-medium: 0 2px 8px rgba(255, 152, 0, 0.2);
+            --shadow-risk-low: 0 2px 8px rgba(76, 175, 80, 0.2);
+        }
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       GLOBAL STYLES
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    /* Global Selection */
+    ::selection { background-color: var(--color-primary); color: white; }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       RISK CARDS
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    .risk-high { 
+        background-color: var(--color-risk-high-bg); 
+        padding: 16px; 
+        border-radius: 12px; 
+        border-left: 5px solid var(--color-risk-high); 
+        margin-bottom: 12px;
+        box-shadow: var(--shadow-risk-high);
+        color: var(--color-text-primary);
+    }
+    .risk-medium { 
+        background-color: var(--color-risk-medium-bg); 
+        padding: 16px; 
+        border-radius: 12px; 
+        border-left: 5px solid var(--color-risk-medium); 
+        margin-bottom: 12px;
+        box-shadow: var(--shadow-risk-medium);
+        color: var(--color-text-primary);
+    }
+    .risk-low { 
+        background-color: var(--color-risk-low-bg); 
+        padding: 16px; 
+        border-radius: 12px; 
+        border-left: 5px solid var(--color-risk-low); 
+        margin-bottom: 12px;
+        box-shadow: var(--shadow-risk-low);
+        color: var(--color-text-primary);
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       METRIC & CARD CONTAINERS
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    .metric-card { 
+        padding: 20px; 
+        border-radius: 12px; 
+        box-shadow: var(--shadow-card);
+        background: var(--color-bg-card);
+    }
+    
+    .card-container {
+        background: var(--color-bg-card);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: var(--shadow-card);
+        margin-bottom: 20px;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       SIDEBAR STYLING
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, var(--color-bg-sidebar-start) 0%, var(--color-bg-sidebar-end) 100%);
+    }
+    [data-testid="stSidebar"] .stMarkdown h1,
+    [data-testid="stSidebar"] .stMarkdown h2,
+    [data-testid="stSidebar"] .stMarkdown h3 {
+        color: var(--color-text-primary) !important;
+    }
+    [data-testid="stSidebar"] .stMarkdown p,
+    [data-testid="stSidebar"] .stMarkdown span {
+        color: var(--color-text-secondary) !important;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       NAVIGATION BUTTONS
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    .nav-button {
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 12px 20px;
+        color: white;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    .nav-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       INFO, SUCCESS, WARNING BOXES
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    .info-box {
+        background: var(--color-info-bg);
+        border-radius: 12px;
+        padding: 20px;
+        border-left: 4px solid var(--color-info-border);
+        margin: 16px 0;
+        color: var(--color-info-text);
+    }
+    .info-box h3, .info-box h4 { color: var(--color-info-heading) !important; }
+    .info-box p { color: var(--color-info-text) !important; }
+    
+    .success-box {
+        background: var(--color-success-bg);
+        border-radius: 12px;
+        padding: 20px;
+        border-left: 4px solid var(--color-success-border);
+        margin: 16px 0;
+        color: var(--color-success-text);
+    }
+    .success-box h3, .success-box h4 { color: var(--color-success-heading) !important; }
+    .success-box p, .success-box li { color: var(--color-success-text) !important; }
+    
+    .warning-box {
+        background: var(--color-warning-bg);
+        border-radius: 12px;
+        padding: 20px;
+        border-left: 4px solid var(--color-warning-border);
+        margin: 16px 0;
+        color: var(--color-warning-text);
+    }
+    .warning-box h3, .warning-box h4 { color: var(--color-warning-heading) !important; }
+    .warning-box p, .warning-box li { color: var(--color-warning-text) !important; }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       SECTION HEADERS
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    .section-header {
+        background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+        font-size: 1.5rem;
+        margin-bottom: 16px;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       FEATURE & CONCEPT CARDS
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    .feature-card {
+        background: var(--color-feature-bg);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid var(--color-feature-border);
+        height: 100%;
+        transition: all 0.3s ease;
+        color: var(--color-text-primary);
+    }
+    .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-card-hover);
+        background: var(--color-feature-bg);
+    }
+    .feature-card h4 { color: var(--color-feature-heading) !important; }
+    .feature-card p { color: var(--color-feature-text) !important; }
+    
+    .concept-card {
+        background: var(--color-concept-bg);
+        border-radius: 12px;
+        padding: 20px;
+        border-left: 4px solid var(--color-primary);
+        margin: 12px 0;
+        color: var(--color-text-primary);
+    }
+    .concept-card p { color: var(--color-concept-text) !important; }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       FOOTER
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    .footer {
+        text-align: center;
+        padding: 20px;
+        color: var(--color-footer-text);
+        border-top: 1px solid var(--color-footer-border);
+        margin-top: 40px;
+    }
+    .footer p { color: var(--color-footer-text) !important; }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       ACCESSIBILITY
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    button:focus, input:focus, select:focus, textarea:focus {
+        outline: 3px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       QUICK STATS
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    .quick-stat {
+        text-align: center;
+        padding: 16px;
+        background: var(--color-bg-card);
+        border-radius: 12px;
+        margin: 8px 0;
+    }
+    .quick-stat h3 {
+        font-size: 2rem;
+        color: var(--color-primary);
+        margin: 0;
+    }
+    .quick-stat p {
+        color: var(--color-text-muted);
+        margin: 4px 0 0 0;
+        font-size: 0.9rem;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       GRADIENT DIVIDER
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    .gradient-divider {
+        height: 3px;
+        background: linear-gradient(90deg, var(--color-primary), var(--color-secondary), var(--color-risk-high));
+        border-radius: 2px;
+        margin: 24px 0;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -108,25 +469,787 @@ def recompute_all_assessments() -> None:
             )
 
 
-# Sidebar Navigation
-st.sidebar.title(body="🎯 Risk Radar")
-page: str = st.sidebar.radio(
-    label="Navigate",
-    options=["📊 Dashboard", "⚠️ Manage Risks", "📡 Manage Signals", "📈 Trends"],
+def get_quick_stats() -> dict[str, Any]:
+    """Get quick statistics for sidebar display."""
+    with get_db() as db:
+        risks = get_all_risks(db=db)
+        assessments = get_latest_assessments(db=db)
+        high_risk = sum(1 for a in assessments if a.risk_score >= 3.0)
+        total_signals = sum(a.signal_count for a in assessments)
+        return {
+            "total_risks": len(risks),
+            "high_risk": high_risk,
+            "total_signals": total_signals,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SIDEBAR NAVIGATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Sidebar Header with Logo
+st.sidebar.markdown(
+    """
+    <div style="text-align: center; padding: 20px 0;">
+        <h1 style="font-size: 2.5rem; margin: 0;">🎯</h1>
+        <h2 style="margin: 8px 0; font-size: 1.4rem;">Risk Radar</h2>
+        <p style="font-size: 0.85rem; opacity: 0.8; margin: 0;">Personal Risk Intelligence</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
-# Sidebar actions
-st.sidebar.markdown(body="---")
-if st.sidebar.button(label="🔄 Recompute All Assessments", width="stretch"):
+st.sidebar.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+
+# Quick Stats in Sidebar
+stats = get_quick_stats()
+st.sidebar.markdown(
+    f"""
+    <div style="display: flex; justify-content: space-around; padding: 10px 0; margin-bottom: 16px;">
+        <div style="text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">{stats['total_risks']}</div>
+            <div style="font-size: 0.7rem; opacity: 0.8;">Risks</div>
+        </div>
+        <div style="text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: bold; color: #f44336;">{stats['high_risk']}</div>
+            <div style="font-size: 0.7rem; opacity: 0.8;">High Risk</div>
+        </div>
+        <div style="text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: bold; color: #4caf50;">{stats['total_signals']}</div>
+            <div style="font-size: 0.7rem; opacity: 0.8;">Signals</div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.sidebar.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+
+# Navigation Section
+st.sidebar.markdown("### 🧭 Navigation")
+
+page: str = st.sidebar.radio(
+    label="Go to",
+    options=[
+        "📊 Dashboard",
+        "⚠️ Manage Risks",
+        "📡 Manage Signals",
+        "📈 Trends",
+        "📚 Documentation",
+    ],
+    label_visibility="collapsed",
+)
+
+st.sidebar.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+
+# Actions Section
+st.sidebar.markdown("### ⚡ Quick Actions")
+
+if st.sidebar.button(
+    label="🔄 Recompute Assessments",
+    use_container_width=True,
+    help="Recalculate all risk scores based on current signals",
+):
     with st.spinner(text="Recomputing risk assessments..."):
         recompute_all_assessments()
         st.sidebar.success(body="✅ Assessments updated!")
         st.rerun()
 
+st.sidebar.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+
+# Help Section
+st.sidebar.markdown("### 💡 Quick Tips")
+st.sidebar.markdown(
+    """
+    <div style="font-size: 0.8rem; opacity: 0.9; line-height: 1.6;">
+    • <strong>Dashboard</strong>: Overview of all risks<br>
+    • <strong>Manage Risks</strong>: Add/edit risks<br>
+    • <strong>Manage Signals</strong>: Track indicators<br>
+    • <strong>Trends</strong>: Historical analysis<br>
+    • <strong>Docs</strong>: Learn how to use
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.sidebar.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+
+# Footer
+st.sidebar.markdown(
+    """
+    <div style="text-align: center; padding: 16px 0; font-size: 0.75rem; opacity: 0.7;">
+        <p style="margin: 0;">Built with ❤️ for better decisions</p>
+        <p style="margin: 4px 0 0 0;">v1.0.0 • Local-First</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DOCUMENTATION PAGE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if page == "📚 Documentation":
+    st.title("📚 Documentation")
+    st.markdown("*Everything you need to know about Personal Risk Radar*")
+    
+    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+    
+    # Navigation tabs for documentation
+    doc_tab1, doc_tab2, doc_tab3, doc_tab4, doc_tab5 = st.tabs([
+        "🎯 About",
+        "🚀 Getting Started",
+        "📖 Core Concepts",
+        "💡 Inspiration",
+        "📝 Notes & Tips",
+    ])
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # ABOUT TAB
+    # ─────────────────────────────────────────────────────────────────────────
+    with doc_tab1:
+        st.markdown("## 🎯 What is Personal Risk Radar?")
+        
+        st.markdown(
+            """
+            <div class="info-box">
+            <h3 style="margin-top: 0;">A Thinking Tool, Not a Task Manager</h3>
+            <p>Personal Risk Radar is a <strong>local-first system</strong> for explicitly modeling, 
+            tracking, and reasoning about risk over time. Instead of reacting to problems after 
+            they happen, this tool helps you surface latent risks, track early warning signals, 
+            and understand how your exposure evolves.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        st.markdown("### 🎯 The Aim")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown(
+                """
+                <div class="feature-card">
+                <h4>🔮 Proactive Risk Management</h4>
+                <p>Move from reactive firefighting to proactive risk awareness. 
+                Identify potential problems before they become crises.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            
+            st.markdown(
+                """
+                <div class="feature-card">
+                <h4>🧠 Structured Thinking</h4>
+                <p>Transform vague worries into explicit, actionable risk models 
+                with clear parameters and measurable signals.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        
+        with col2:
+            st.markdown(
+                """
+                <div class="feature-card">
+                <h4>📊 Evidence-Based Decisions</h4>
+                <p>Track early warning signals that adjust your risk assessment 
+                over time, creating an evidence trail for better decisions.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            
+            st.markdown(
+                """
+                <div class="feature-card">
+                <h4>🔒 Privacy First</h4>
+                <p>All data stays on your machine. No cloud sync, no accounts, 
+                no tracking. Your risks are your business.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        
+        st.markdown("### ✨ Key Features")
+        
+        features_col1, features_col2, features_col3 = st.columns(3)
+        
+        with features_col1:
+            st.markdown(
+                """
+                **📊 Interactive Dashboard**
+                - Real-time risk visualization
+                - Category distribution charts
+                - Severity heatmaps
+                - At-a-glance metrics
+                
+                **⚠️ Risk Management**
+                - 5 risk categories
+                - Configurable parameters
+                - Smart score previews
+                """
+            )
+        
+        with features_col2:
+            st.markdown(
+                """
+                **📡 Signal Tracking**
+                - Early warning indicators
+                - Strength levels (weak/medium/strong)
+                - Direction (increase/decrease)
+                - Automatic score recalculation
+                
+                **📈 Trend Analysis**
+                - Historical charts
+                - Multi-metric comparison
+                - Statistical summaries
+                """
+            )
+        
+        with features_col3:
+            st.markdown(
+                """
+                **🔄 Assessment Engine**
+                - Deterministic scoring
+                - Confidence-weighted calculations
+                - Signal aggregation
+                - Audit trail
+                
+                **🛡️ Local-First**
+                - SQLite storage
+                - No internet required
+                - Full data ownership
+                """
+            )
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # GETTING STARTED TAB
+    # ─────────────────────────────────────────────────────────────────────────
+    with doc_tab2:
+        st.markdown("## 🚀 Getting Started")
+        
+        st.markdown(
+            """
+            <div class="success-box">
+            <h4 style="margin-top: 0;">⏱️ 5-Minute Quick Start</h4>
+            <p>Follow these steps to set up your first risk tracking in under 5 minutes.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        st.markdown("### Step 1: Create Your First Risk")
+        
+        st.markdown(
+            """
+            1. Navigate to **⚠️ Manage Risks** in the sidebar
+            2. Click on the **➕ Create Risk** tab
+            3. Fill in the risk details:
+               - **Name**: A clear, concise name (e.g., "Job market downturn")
+               - **Category**: Choose from career, financial, health, technical, or personal
+               - **Base Likelihood**: Your estimate of probability (0-100%)
+               - **Impact**: Severity if it happens (1-5 scale)
+               - **Confidence**: How sure you are about your estimate
+               - **Time Horizon**: When might this materialize?
+            4. Click **✅ Create Risk**
+            """
+        )
+        
+        st.markdown("### Step 2: Add Warning Signals")
+        
+        st.markdown(
+            """
+            1. Go to **📡 Manage Signals**
+            2. Click **➕ Create Signal**
+            3. Link the signal to your risk
+            4. Define the signal:
+               - **Name**: What are you observing? (e.g., "Tech layoffs in my sector")
+               - **Direction**: Does this increase or decrease the risk?
+               - **Strength**: How strongly does it affect the risk?
+            5. Click **✅ Create Signal**
+            """
+        )
+        
+        st.markdown("### Step 3: Monitor Your Dashboard")
+        
+        st.markdown(
+            """
+            1. Return to **📊 Dashboard**
+            2. View your risk score and severity level
+            3. See how signals affect your overall assessment
+            4. Click **🔄 Recompute Assessments** to update scores
+            """
+        )
+        
+        st.markdown("### Step 4: Track Trends Over Time")
+        
+        st.markdown(
+            """
+            1. Visit **📈 Trends** regularly
+            2. Select a risk to see its historical data
+            3. Watch for patterns in your risk scores
+            4. Adjust your approach based on trends
+            """
+        )
+        
+        st.markdown("### 💡 Scoring Formula Explained")
+        
+        st.markdown(
+            """
+            <div class="concept-card">
+            <h4 style="margin-top: 0;">How Risk Scores Are Calculated</h4>
+            <p>The formula is transparent and deterministic:</p>
+            <pre style="background: #f5f5f5; padding: 12px; border-radius: 8px; overflow-x: auto;">
+Risk Score = Effective Likelihood × Impact × Confidence
+
+Where:
+• Effective Likelihood = Base Likelihood + Signal Modifiers
+• Signal Modifiers: Weak ±5%, Medium ±10%, Strong ±20%
+• Score Range: 0.00 (no risk) to 5.00 (maximum risk)
+            </pre>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        st.markdown("### 🎯 Severity Levels")
+        
+        sev_col1, sev_col2, sev_col3 = st.columns(3)
+        
+        with sev_col1:
+            st.markdown(
+                """
+                <div class="risk-low" style="text-align: center;">
+                <h3>🟢 Low</h3>
+                <p>Score: 0.00 - 1.49</p>
+                <p>Monitor, no immediate action needed</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        
+        with sev_col2:
+            st.markdown(
+                """
+                <div class="risk-medium" style="text-align: center;">
+                <h3>🟡 Medium</h3>
+                <p>Score: 1.50 - 2.99</p>
+                <p>Attention required, plan mitigation</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        
+        with sev_col3:
+            st.markdown(
+                """
+                <div class="risk-high" style="text-align: center;">
+                <h3>🔴 High</h3>
+                <p>Score: 3.00 - 5.00</p>
+                <p>Urgent, take immediate action</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # CORE CONCEPTS TAB
+    # ─────────────────────────────────────────────────────────────────────────
+    with doc_tab3:
+        st.markdown("## 📖 Core Concepts")
+        
+        st.markdown(
+            """
+            Personal Risk Radar is built around three fundamental ideas that separate 
+            it from typical productivity tools.
+            """
+        )
+        
+        st.markdown("### 1️⃣ Risks Should Be Explicit")
+        
+        st.markdown(
+            """
+            <div class="concept-card">
+            <p><strong>If a risk matters, it deserves a name, context, and structure.</strong></p>
+            <p>Vague worries ("I'm concerned about my career") become actionable when explicit 
+            ("Career stagnation risk: 40% likelihood, impact 3/5, 6-month horizon").</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        st.markdown("### 2️⃣ Signals Matter More Than Outcomes")
+        
+        st.markdown(
+            """
+            <div class="concept-card">
+            <p><strong>Early warning signs often appear long before failure.</strong></p>
+            <p>By tracking signals, you can detect shifts in risk before they materialize. 
+            A single "strong" signal like "team lead resigned" might shift a career risk 
+            significantly before any actual impact occurs.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        st.markdown("### 3️⃣ Reasoning Should Be Explainable")
+        
+        st.markdown(
+            """
+            <div class="concept-card">
+            <p><strong>Every score and trend is derived from clear, inspectable logic.</strong></p>
+            <p>No machine learning black boxes. No mysterious algorithms. You can trace 
+            exactly why a risk has a certain score and what signals contributed to it.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        st.markdown("---")
+        
+        st.markdown("### 📊 Domain Model")
+        
+        concept_col1, concept_col2 = st.columns(2)
+        
+        with concept_col1:
+            st.markdown("#### ⚠️ Risk")
+            st.markdown(
+                """
+                A **Risk** is a future uncertainty with potential impact.
+                
+                | Field | Description | Range |
+                |-------|-------------|-------|
+                | Category | Domain (career, financial, health, technical, personal) | Fixed |
+                | Base Likelihood | Probability before signals | 0.0–1.0 |
+                | Impact | Severity if it happens | 1–5 |
+                | Confidence | How sure you are | 0.0–1.0 |
+                | Time Horizon | When it might materialize | weeks/months |
+                
+                **Example**: "Technical debt accumulation" with 60% likelihood, 
+                impact 4/5, 80% confidence, months horizon.
+                """
+            )
+        
+        with concept_col2:
+            st.markdown("#### 📡 Signal")
+            st.markdown(
+                """
+                A **Signal** is a measurable early warning sign linked to a risk.
+                
+                | Field | Description | Options |
+                |-------|-------------|---------|
+                | Direction | Increases or decreases risk | increase/decrease |
+                | Strength | How strongly it affects | weak/medium/strong |
+                | Observed At | When you noticed it | Date |
+                
+                **Signal Strengths**:
+                - 🔹 **Weak**: ±5% likelihood adjustment
+                - 🔸 **Medium**: ±10% likelihood adjustment
+                - 🔴 **Strong**: ±20% likelihood adjustment
+                """
+            )
+        
+        st.markdown("#### 📋 Assessment")
+        st.markdown(
+            """
+            An **Assessment** is a snapshot of a risk's state at a point in time.
+            
+            When you click "Recompute Assessments", the system:
+            1. Takes each risk's base parameters
+            2. Applies all linked signal modifiers
+            3. Calculates the effective likelihood (clamped 0-1)
+            4. Computes the final risk score
+            5. Saves this as a historical record
+            
+            This creates an audit trail showing how your risk exposure evolved.
+            """
+        )
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # INSPIRATION TAB
+    # ─────────────────────────────────────────────────────────────────────────
+    with doc_tab4:
+        st.markdown("## 💡 Inspiration & Philosophy")
+        
+        st.markdown(
+            """
+            <div class="info-box">
+            <h4 style="margin-top: 0;">Why This Tool Exists</h4>
+            <p>Most risks don't appear suddenly — they accumulate quietly. Personal Risk Radar 
+            was born from the realization that we need better tools for thinking about 
+            uncertainty, not just managing tasks.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        st.markdown("### 🧠 The Problem with Intuition")
+        
+        st.markdown(
+            """
+            Our brains are notoriously bad at assessing risk:
+            
+            - **Availability bias**: We overweight dramatic, recent events
+            - **Optimism bias**: We underestimate risks to ourselves
+            - **Anchoring**: First impressions dominate our estimates
+            - **Emotional reasoning**: Fear and hope distort probability judgments
+            
+            A structured system helps counteract these biases by forcing explicit, 
+            documented assessments that can be reviewed and updated.
+            """
+        )
+        
+        st.markdown("### 📚 Intellectual Influences")
+        
+        influence_col1, influence_col2 = st.columns(2)
+        
+        with influence_col1:
+            st.markdown(
+                """
+                **Risk Management Literature**
+                - Nassim Taleb's work on uncertainty and antifragility
+                - Philip Tetlock's research on forecasting
+                - Daniel Kahneman on cognitive biases
+                
+                **Systems Thinking**
+                - Donella Meadows on leverage points
+                - Peter Senge on mental models
+                """
+            )
+        
+        with influence_col2:
+            st.markdown(
+                """
+                **Software Philosophy**
+                - Local-first software principles
+                - Plain text accounting (Ledger, hledger)
+                - Tools for thought movement
+                
+                **Personal Knowledge Management**
+                - Zettelkasten methodology
+                - Structured note-taking systems
+                """
+            )
+        
+        st.markdown("### 🎯 Design Principles")
+        
+        principles_col1, principles_col2, principles_col3 = st.columns(3)
+        
+        with principles_col1:
+            st.markdown(
+                """
+                <div class="feature-card">
+                <h4>🔍 Transparency</h4>
+                <p>Every calculation is visible and auditable. No hidden algorithms.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        
+        with principles_col2:
+            st.markdown(
+                """
+                <div class="feature-card">
+                <h4>🏠 Local-First</h4>
+                <p>Your data never leaves your machine. No accounts, no sync, no tracking.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        
+        with principles_col3:
+            st.markdown(
+                """
+                <div class="feature-card">
+                <h4>🧩 Simplicity</h4>
+                <p>Complex enough to be useful, simple enough to actually use.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        
+        st.markdown("### 💭 Why Not Just Use a Spreadsheet?")
+        
+        st.markdown(
+            """
+            You could! But Personal Risk Radar provides:
+            
+            1. **Structure**: Enforced schema means consistent risk definitions
+            2. **Automation**: Signals automatically update risk scores
+            3. **Visualization**: Charts and trends without manual work
+            4. **History**: Automatic assessment snapshots over time
+            5. **Focused UX**: Purpose-built interface for risk thinking
+            
+            It's the difference between a general calculator and a purpose-built financial app.
+            """
+        )
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # NOTES & TIPS TAB
+    # ─────────────────────────────────────────────────────────────────────────
+    with doc_tab5:
+        st.markdown("## 📝 Notes & Best Practices")
+        
+        st.markdown("### ✅ Do's")
+        
+        st.markdown(
+            """
+            <div class="success-box">
+            <ul style="margin: 0; padding-left: 20px;">
+                <li><strong>Be specific</strong>: "Q2 budget overrun" is better than "financial problems"</li>
+                <li><strong>Update regularly</strong>: Review and recompute at least weekly</li>
+                <li><strong>Track signals actively</strong>: The more signals, the better your picture</li>
+                <li><strong>Use confidence honestly</strong>: Low confidence is valuable information</li>
+                <li><strong>Review trends</strong>: Patterns over time reveal more than snapshots</li>
+                <li><strong>Document reasoning</strong>: Use description fields to capture context</li>
+            </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        st.markdown("### ❌ Don'ts")
+        
+        st.markdown(
+            """
+            <div class="warning-box">
+            <ul style="margin: 0; padding-left: 20px;">
+                <li><strong>Don't track everything</strong>: Focus on risks that actually matter</li>
+                <li><strong>Don't ignore low scores</strong>: They can change quickly with new signals</li>
+                <li><strong>Don't set and forget</strong>: Stale risks are worse than no tracking</li>
+                <li><strong>Don't over-engineer</strong>: 3-5 risks with good signals beats 50 neglected ones</li>
+                <li><strong>Don't trust scores blindly</strong>: They're aids to thinking, not answers</li>
+            </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        st.markdown("### 💡 Pro Tips")
+        
+        tips_col1, tips_col2 = st.columns(2)
+        
+        with tips_col1:
+            st.markdown(
+                """
+                **Starting Out**
+                - Begin with 3 risks you're genuinely worried about
+                - Add 1-2 signals per risk to start
+                - Review weekly and adjust
+                
+                **Signal Selection**
+                - Choose observable, concrete indicators
+                - Mix leading (predictive) and lagging (confirming) signals
+                - A "decrease" signal is just as valuable as "increase"
+                """
+            )
+        
+        with tips_col2:
+            st.markdown(
+                """
+                **Maintenance Rhythm**
+                - Daily: Quick dashboard glance
+                - Weekly: Add new signals, recompute assessments
+                - Monthly: Review trends, retire resolved risks
+                
+                **When to Create a New Risk**
+                - You find yourself worrying about it repeatedly
+                - It could significantly impact your life/work
+                - You can identify potential signals to track
+                """
+            )
+        
+        st.markdown("### 📊 Example Risk Setup")
+        
+        with st.expander("📋 Career Stagnation Risk (Example)"):
+            st.markdown(
+                """
+                **Risk Details**
+                - **Name**: Career Stagnation
+                - **Category**: Career
+                - **Base Likelihood**: 35%
+                - **Impact**: 4/5
+                - **Confidence**: 70%
+                - **Time Horizon**: Months
+                - **Description**: Risk of remaining in current role without growth 
+                  opportunities or skill development.
+                
+                **Linked Signals**
+                
+                | Signal | Direction | Strength |
+                |--------|-----------|----------|
+                | No new projects assigned in 3 months | Increase | Medium |
+                | Manager discussions about promotion | Decrease | Strong |
+                | Industry layoffs in my sector | Increase | Weak |
+                | Completed certification course | Decrease | Medium |
+                | Skipped for team lead opportunity | Increase | Strong |
+                """
+            )
+        
+        with st.expander("📋 Health Burnout Risk (Example)"):
+            st.markdown(
+                """
+                **Risk Details**
+                - **Name**: Burnout from Overwork
+                - **Category**: Health
+                - **Base Likelihood**: 25%
+                - **Impact**: 5/5
+                - **Confidence**: 60%
+                - **Time Horizon**: Weeks
+                - **Description**: Risk of physical/mental exhaustion from sustained 
+                  high workload without adequate recovery.
+                
+                **Linked Signals**
+                
+                | Signal | Direction | Strength |
+                |--------|-----------|----------|
+                | Working >10 hours/day for a week | Increase | Strong |
+                | Regular exercise routine maintained | Decrease | Medium |
+                | Difficulty sleeping | Increase | Medium |
+                | Took full weekend off | Decrease | Weak |
+                | Snapping at colleagues | Increase | Strong |
+                """
+            )
+        
+        st.markdown("### 🔧 Technical Notes")
+        
+        st.markdown(
+            """
+            - **Database**: SQLite file (`risk_radar.db`) in the project directory
+            - **Backup**: Simply copy the `.db` file to back up all data
+            - **Reset**: Delete the database file to start fresh
+            - **Export**: Use the Trends page to view historical data
+            """
+        )
+        
+        st.markdown("---")
+        
+        st.markdown(
+            """
+            <div class="footer">
+            <p>🎯 Personal Risk Radar</p>
+            <p>A thinking tool for better decisions under uncertainty</p>
+            <p style="font-size: 0.8rem; opacity: 0.7;">Built with FastAPI, Streamlit, and SQLite</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DASHBOARD PAGE
+# ═══════════════════════════════════════════════════════════════════════════════
+
 # Main Dashboard Page
-if page == "📊 Dashboard":
+elif page == "📊 Dashboard":
     st.title(body="📊 Risk Dashboard")
-    st.markdown(body="*Real-time view of your risk exposure across all categories*")
+    st.markdown("*Your real-time view of risk exposure across all categories*")
+    
+    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
 
     with get_db() as db:
         # Get latest assessments
@@ -178,8 +1301,15 @@ if page == "📊 Dashboard":
         st.markdown(body="---")
 
         if not assessments:
-            st.info(
-                body="👋 Welcome! Get started by creating your first risk in the '⚠️ Manage Risks' page."
+            st.markdown(
+                """
+                <div class="info-box">
+                <h3 style="margin-top: 0;">👋 Welcome to Personal Risk Radar!</h3>
+                <p>Get started by creating your first risk in the <strong>⚠️ Manage Risks</strong> page.</p>
+                <p style="margin-bottom: 0;">Need help? Check out the <strong>📚 Documentation</strong> for a quick start guide.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
         else:
             # Visualizations section
@@ -266,7 +1396,7 @@ if page == "📊 Dashboard":
                 fig_heatmap.update_layout(height=400, margin=dict(l=0, r=0, t=30, b=0))  # type: ignore[call-arg]
                 st.plotly_chart(fig_heatmap, width="stretch")
 
-        st.markdown(body="---")
+        st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
 
         # Risk List
         st.subheader(body="📋 Current Risks")
@@ -317,8 +1447,8 @@ if page == "📊 Dashboard":
             )
 
             # Detailed risk cards
-            st.markdown(body="---")
-            st.subheader(body="🔍 Risk Details")
+            st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+            st.subheader(body="🔍 Top Risk Details")
 
             for assessment in assessments[:5]:  # Show top 5
                 risk: RiskModel | None = get_risk(db=db, risk_id=assessment.risk_id)
@@ -364,17 +1494,43 @@ if page == "📊 Dashboard":
                         st.markdown(body="</div>", unsafe_allow_html=True)
                         st.markdown(body="<br>", unsafe_allow_html=True)
 
+    # Footer for Dashboard page
+    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="footer">
+        <p>🎯 Personal Risk Radar • Local-First Risk Intelligence</p>
+        <p style="font-size: 0.8rem;">Need help? Check out the 📚 Documentation page</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MANAGE RISKS PAGE
+# ═══════════════════════════════════════════════════════════════════════════════
+
 # Manage Risks Page
 elif page == "⚠️ Manage Risks":
     st.title(body="⚠️ Manage Risks")
-    st.markdown(body="*Define and track future uncertainties with potential impact*")
+    st.markdown("*Define and track future uncertainties with potential impact*")
+    
+    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
 
     tab1, tab2, tab3 = st.tabs(["➕ Create Risk", "📝 Edit Risk", "🗑️ Delete Risk"])
 
     with tab1:
         st.subheader(body="Create New Risk")
-        st.info(
-            "💡 **Tip:** Start with risks that feel important but lack clear mitigation. Good examples: career stagnation, budget overruns, technical debt."
+        
+        st.markdown(
+            """
+            <div class="info-box">
+            <h4 style="margin-top: 0;">💡 What makes a good risk?</h4>
+            <p style="margin-bottom: 0;">Start with risks that feel important but lack clear mitigation. 
+            Good examples: career stagnation, budget overruns, technical debt, health concerns.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
         with st.form(key="create_risk_form"):
@@ -646,10 +1802,16 @@ elif page == "⚠️ Manage Risks":
                             )
                             st.rerun()
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# MANAGE SIGNALS PAGE
+# ═══════════════════════════════════════════════════════════════════════════════
+
 # Manage Signals Page
 elif page == "📡 Manage Signals":
     st.title(body="📡 Manage Signals")
-    st.markdown(body="*Track early warning indicators that increase or decrease risk*")
+    st.markdown("*Track early warning indicators that affect your risk exposure*")
+    
+    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
 
     tab1, tab2, tab3 = st.tabs(
         ["➕ Create Signal", "📝 Edit Signal", "🗑️ Delete Signal"]
@@ -669,8 +1831,15 @@ elif page == "📡 Manage Signals":
                     body="💡 Signals are early warning indicators linked to specific risks. Create a risk in the '⚠️ Manage Risks' page to get started."
                 )
             else:
-                st.info(
-                    "💡 **What are signals?** Observable indicators that suggest a risk is increasing or decreasing. Examples: 'Failed CI/CD tests', 'Overtime hours increasing', 'Regular exercise routine'."
+                st.markdown(
+                    """
+                    <div class="info-box">
+                    <h4 style="margin-top: 0;">💡 What are signals?</h4>
+                    <p style="margin-bottom: 0;">Observable indicators that suggest a risk is increasing or decreasing. 
+                    Examples: 'Failed CI/CD tests', 'Overtime hours increasing', 'Regular exercise routine'.</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
 
                 with st.form(key="create_signal_form"):
@@ -1010,10 +2179,16 @@ elif page == "📡 Manage Signals":
                             )
                             st.rerun()
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# TRENDS PAGE
+# ═══════════════════════════════════════════════════════════════════════════════
+
 # Trends Page
 elif page == "📈 Trends":
     st.title(body="📈 Risk Trends")
-    st.markdown(body="*Track how your risk exposure changes over time*")
+    st.markdown("*Analyze how your risk exposure changes over time*")
+    
+    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
 
     with get_db() as db:
         risks = get_all_risks(db=db)
@@ -1230,3 +2405,14 @@ elif page == "📈 Trends":
                                 width="stretch",
                                 hide_index=True,
                             )
+
+    # Footer for Trends page
+    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="footer">
+        <p>🎯 Personal Risk Radar • Local-First Risk Intelligence</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
