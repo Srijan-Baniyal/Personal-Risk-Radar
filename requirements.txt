@@ -1,0 +1,14 @@
+# Core Dependencies
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+streamlit==1.42.0
+pandas==2.2.3
+plotly==6.1.0
+python-multipart==0.0.22
+pydantic==2.10.5
+
+# Database
+sqlalchemy==2.0.38
+
+# Additional
+python-dateutil==2.9.0.post0
